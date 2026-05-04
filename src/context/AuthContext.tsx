@@ -11,6 +11,7 @@ interface AuthContextType {
   signIn: () => Promise<void>;
   logout: () => Promise<void>;
   updateRole: (role: 'teacher' | 'student') => Promise<void>;
+  auth: any;
   activeDM: { id: string, name: string } | null;
   setActiveDM: (dm: { id: string, name: string } | null) => void;
   navigateToChat: (id: string, name: string) => void;
@@ -121,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, logout, updateRole, activeDM, setActiveDM, navigateToChat }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, logout, updateRole, auth, activeDM, setActiveDM, navigateToChat }}>
       {children}
     </AuthContext.Provider>
   );

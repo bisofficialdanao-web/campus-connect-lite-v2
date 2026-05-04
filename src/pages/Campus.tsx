@@ -49,8 +49,45 @@ import UserProfileModal from '../components/UserProfileModal';
 import { Post, Comment as CommentType } from '../types';
 import { createNotification } from '../lib/notifications';
 
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null, auth: any) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
 export default function Campus() {
-  const { user, profile } = useAuth();
+  const { user, profile, auth } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [newPost, setNewPost] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -123,7 +160,8 @@ export default function Campus() {
   };
 
   useEffect(() => {
-    const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
+    const path = 'posts';
+    const q = query(collection(db, path), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const postsData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -131,17 +169,20 @@ export default function Campus() {
       })) as Post[];
       setPosts(postsData);
       setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, path, auth);
     });
     return () => unsubscribe();
-  }, []);
+  }, [auth]);
 
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!newPost.trim() && !uploadedImageUrl) || !user || isPosting || isUploading) return;
 
     setIsPosting(true);
+    const path = 'posts';
     try {
-      await addDoc(collection(db, 'posts'), {
+      await addDoc(collection(db, path), {
         content: newPost,
         imageUrl: uploadedImageUrl,
         authorId: user.uid,
@@ -159,7 +200,7 @@ export default function Campus() {
       setUploadedImageUrl(null);
       setIsAnonymous(false);
     } catch (error) {
-      console.error("Error adding post:", error);
+      handleFirestoreError(error, OperationType.WRITE, path, auth);
     } finally {
       setIsPosting(false);
     }
@@ -307,7 +348,7 @@ export default function Campus() {
         </div>
 
         {/* Posts Feed */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           {loading ? (
             <div className="flex items-center justify-center py-20 bg-brand-surface rounded-2xl border border-brand-border/50">
               <div className="w-6 h-6 border-2 border-brand-primary border-t-transparent rounded-full animate-spin" />
@@ -402,7 +443,7 @@ export default function Campus() {
 }
 
 function ModuleModal({ onClose }: { onClose: () => void }) {
-  const { user, profile } = useAuth();
+  const { user, profile, auth } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -448,7 +489,7 @@ function ModuleModal({ onClose }: { onClose: () => void }) {
       });
       onClose();
     } catch (error) {
-      console.error("Error creating module post:", error);
+      handleFirestoreError(error, OperationType.WRITE, 'posts', auth);
       setIsSaving(false);
     }
   };
@@ -519,7 +560,7 @@ function ModuleModal({ onClose }: { onClose: () => void }) {
 }
 
 function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick: (uid: string) => void, onImageClick: (url: string) => void }) {
-  const { user, profile } = useAuth();
+  const { user, profile, auth } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -540,28 +581,34 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
 
   const handleReact = async () => {
     if (!user) return;
-    const postRef = doc(db, 'posts', post.id);
-    const hasReacted = post.reactions['heart']?.includes(user.uid);
-    
-    await updateDoc(postRef, {
-      [`reactions.heart`]: hasReacted ? arrayRemove(user.uid) : arrayUnion(user.uid)
-    });
-
-    if (!hasReacted && user.uid !== post.authorId) {
-      await createNotification({
-        recipientId: post.authorId,
-        senderId: user.uid,
-        senderName: profile?.displayName || 'Someone',
-        type: 'reaction',
-        text: `${profile?.displayName || 'Someone'} reacted to your post: "${post.content.substring(0, 30)}..."`,
-        link: `/campus`
+    const path = `posts/${post.id}`;
+    try {
+      const postRef = doc(db, 'posts', post.id);
+      const hasReacted = post.reactions['heart']?.includes(user.uid);
+      
+      await updateDoc(postRef, {
+        [`reactions.heart`]: hasReacted ? arrayRemove(user.uid) : arrayUnion(user.uid)
       });
+
+      if (!hasReacted && user.uid !== post.authorId) {
+        await createNotification({
+          recipientId: post.authorId,
+          senderId: user.uid,
+          senderName: profile?.displayName || 'Someone',
+          type: 'reaction',
+          text: `${profile?.displayName || 'Someone'} reacted to your post: "${post.content.substring(0, 30)}..."`,
+          link: `/campus`
+        });
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path, auth);
     }
   };
 
   const handleEdit = async () => {
     if (!editContent.trim() || isSaving) return;
     setIsSaving(true);
+    const path = `posts/${post.id}`;
     try {
       const postRef = doc(db, 'posts', post.id);
       await updateDoc(postRef, {
@@ -570,15 +617,20 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
       });
       setIsEditing(false);
     } catch (error) {
-      console.error("Error updating post:", error);
+      handleFirestoreError(error, OperationType.WRITE, path, auth);
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleDelete = async () => {
+    const path = `posts/${post.id}`;
     if (confirm('Delete this post?')) {
-      await deleteDoc(doc(db, 'posts', post.id));
+      try {
+        await deleteDoc(doc(db, 'posts', post.id));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, path, auth);
+      }
     }
   };
 
@@ -798,30 +850,34 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
 }
 
 function CommentsList({ postId, currentCommentCount }: { postId: string, currentCommentCount: number }) {
-  const { user, profile } = useAuth();
+  const { user, profile, auth } = useAuth();
   const [comments, setComments] = useState<CommentType[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isCommenting, setIsCommenting] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, `posts/${postId}/comments`), orderBy('createdAt', 'asc'));
+    const path = `posts/${postId}/comments`;
+    const q = query(collection(db, path), orderBy('createdAt', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const c = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as CommentType[];
       setComments(c);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, path, auth);
     });
     return () => unsubscribe();
-  }, [postId]);
+  }, [postId, auth]);
 
   const handleComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !user || isCommenting) return;
     
     setIsCommenting(true);
+    const path = `posts/${postId}/comments`;
     try {
-      await addDoc(collection(db, `posts/${postId}/comments`), {
+      await addDoc(collection(db, path), {
         postId,
         content: newComment,
         authorId: user.uid,
@@ -835,33 +891,40 @@ function CommentsList({ postId, currentCommentCount }: { postId: string, current
         commentCount: (currentCommentCount + 1)
       });
 
-      // Notify post author if not the same person
-      const postAuthorId = comments.length > 0 ? comments[0].authorId : null; // This is naive, let's pass it
-      
       setNewComment('');
     } catch (error) {
-      console.error("Comment failed", error);
+      handleFirestoreError(error, OperationType.WRITE, path, auth);
     } finally {
       setIsCommenting(false);
     }
   };
 
   const handleCommentDelete = async (commentId: string) => {
+    const path = `posts/${postId}/comments/${commentId}`;
     if (confirm('Delete this comment?')) {
-      await deleteDoc(doc(db, `posts/${postId}/comments`, commentId));
-      const postRef = doc(db, 'posts', postId);
-      await updateDoc(postRef, {
-        commentCount: Math.max(0, currentCommentCount - 1)
-      });
+      try {
+        await deleteDoc(doc(db, `posts/${postId}/comments`, commentId));
+        const postRef = doc(db, 'posts', postId);
+        await updateDoc(postRef, {
+          commentCount: Math.max(0, currentCommentCount - 1)
+        });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, path, auth);
+      }
     }
   };
 
   const handleCommentUpdate = async (commentId: string, content: string) => {
     if (!content.trim()) return;
-    await updateDoc(doc(db, `posts/${postId}/comments`, commentId), {
-      content,
-      updatedAt: serverTimestamp()
-    });
+    const path = `posts/${postId}/comments/${commentId}`;
+    try {
+      await updateDoc(doc(db, `posts/${postId}/comments`, commentId), {
+        content,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path, auth);
+    }
   };
 
   return (
@@ -962,7 +1025,7 @@ function CommentItem({ comment, onDelete, onUpdate }: { comment: CommentType, on
 }
 
 function EventModal({ onClose }: { onClose: () => void }) {
-  const { user, profile } = useAuth();
+  const { user, profile, auth } = useAuth();
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
@@ -988,7 +1051,7 @@ function EventModal({ onClose }: { onClose: () => void }) {
       });
       onClose();
     } catch (error) {
-      console.error("Error creating event:", error);
+      handleFirestoreError(error, OperationType.WRITE, 'events', auth);
       setIsSaving(false);
     }
   };
