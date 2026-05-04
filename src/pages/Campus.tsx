@@ -103,6 +103,7 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [isModuleModalOpen, setIsModuleModalOpen] = useState(false);
@@ -117,18 +118,21 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
         return;
       }
       
-      setIsUploading(true);
-      setUploadProgress(0);
+      setIsCompressing(true);
       
       try {
         const options = {
-          maxSizeMB: 0.2, // Aim for under 200KB
-          maxWidthOrHeight: 1024,
+          maxSizeMB: 0.08, // Aim for under 80KB as requested
+          maxWidthOrHeight: 640,
           useWebWorker: true,
-          initialQuality: 0.7
+          initialQuality: 0.4,
+          fileType: 'image/webp' as any
         };
         
         const compressedFile = await imageCompression(file, options);
+        setIsCompressing(false);
+        setIsUploading(true);
+        setUploadProgress(0);
         
         setSelectedImage(compressedFile);
         const reader = new FileReader();
@@ -144,6 +148,7 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
         alert('Image processing failed. Please try again.');
         setSelectedImage(null);
         setImagePreview(null);
+        setIsCompressing(false);
       } finally {
         setIsUploading(false);
       }
@@ -292,16 +297,25 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
               <div className="relative w-full max-h-64 rounded-2xl overflow-hidden border border-brand-border/30 bg-brand-bg group ml-0 sm:ml-14">
                 <img src={imagePreview} alt="Preview" className="w-full h-full object-contain" />
                 
-                {isUploading && (
+                {(isUploading || isCompressing) && (
                   <div className="absolute inset-0 bg-brand-ink/40 flex flex-col items-center justify-center backdrop-blur-[2px]">
-                    <div className="w-24 h-1 bg-white/20 rounded-full overflow-hidden mb-2">
-                      <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${uploadProgress}%` }}
-                        className="h-full bg-brand-primary"
-                      />
-                    </div>
-                    <span className="text-[10px] font-black text-white uppercase tracking-widest">{Math.round(uploadProgress)}%</span>
+                    {isCompressing ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 size={24} className="text-white animate-spin" />
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest animate-pulse">Compressing...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="w-24 h-1 bg-white/20 rounded-full overflow-hidden mb-2">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${uploadProgress}%` }}
+                            className="h-full bg-brand-primary"
+                          />
+                        </div>
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest">{Math.round(uploadProgress)}%</span>
+                      </>
+                    )}
                   </div>
                 )}
 

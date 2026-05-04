@@ -15,6 +15,7 @@ export default function Profile() {
   const [photoURL, setPhotoURL] = useState(profile?.photoURL || '');
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,17 +40,20 @@ export default function Profile() {
         return;
     }
 
-    setIsUploading(true);
+    setIsCompressing(true);
     try {
       // Compress image
       const options = {
-        maxSizeMB: 0.2,
-        maxWidthOrHeight: 1024,
+        maxSizeMB: 0.08,
+        maxWidthOrHeight: 640,
         useWebWorker: true,
-        initialQuality: 0.7
+        initialQuality: 0.4,
+        fileType: 'image/webp' as any
       };
       
       const compressedFile = await imageCompression(file, options);
+      setIsCompressing(false);
+      setIsUploading(true);
 
       // Use a fixed path so it overwrites the old one (Cleanup)
       const storageRef = ref(storage, `profiles/${profile.uid}/avatar`);
@@ -74,6 +78,7 @@ export default function Profile() {
     } catch (error) {
       console.error("Upload error", error);
       alert('Image processing failed.');
+      setIsCompressing(false);
       setIsUploading(false);
     }
   };
@@ -173,11 +178,19 @@ export default function Profile() {
                 }}
                 className={cn(
                   "w-full h-32 bg-brand-bg border-2 border-dashed border-brand-border rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-brand-primary transition-all group overflow-hidden relative",
-                  isUploading && "pointer-events-none opacity-50"
+                  (isUploading || isCompressing) && "pointer-events-none opacity-50"
                 )}
               >
-                {isUploading ? (
-                  <Loader2 className="animate-spin text-brand-primary" size={24} />
+                {isCompressing ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="animate-spin text-brand-primary" size={24} />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary animate-pulse">Compressing...</span>
+                  </div>
+                ) : isUploading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="animate-spin text-brand-primary" size={24} />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary">Uploading...</span>
+                  </div>
                 ) : photoURL ? (
                   <>
                     <img src={photoURL} alt="Preview" className="w-full h-full object-cover" />
@@ -199,7 +212,7 @@ export default function Profile() {
                   accept="image/*"
                 />
               </div>
-              <p className="text-[9px] text-brand-secondary/60 italic px-1">Max 2MB. PNG, JPG or WebP.</p>
+              <p className="text-[9px] text-brand-secondary/60 italic px-1">Max 5MB. PNG, JPG or WebP.</p>
             </div>
             <div className="flex gap-2">
               <button 
