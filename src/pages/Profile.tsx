@@ -2,7 +2,8 @@ import React, { useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { User, ShieldCheck, Mail, LogOut, Edit3, Camera, Save, X, GraduationCap, BookOpen, AlertCircle, Upload, Loader2 } from 'lucide-react';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import imageCompression from 'browser-image-compression';
 import { db, storage } from '../lib/firebase';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
@@ -26,20 +27,34 @@ export default function Profile() {
   const uploadFile = async (file: File) => {
     if (!profile) return;
     
-    // Validate file type and size
+    // Validate file type
     if (!file.type.startsWith('image/')) {
         alert('Please upload an image file (PNG, JPG, etc.)');
         return;
     }
-    if (file.size > 2 * 1024 * 1024) { // 2MB limit
-        alert('File size must be less than 2MB');
+
+    // Size check
+    if (file.size > 5 * 1024 * 1024) {
+        alert('File too large for the Free Tier. Please use a smaller file.');
         return;
     }
 
     setIsUploading(true);
     try {
-      const storageRef = ref(storage, `profiles/${profile.uid}/${Date.now()}_${file.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      // Compress image
+      const options = {
+        maxSizeMB: 0.2,
+        maxWidthOrHeight: 1024,
+        useWebWorker: true,
+        initialQuality: 0.7
+      };
+      
+      const compressedFile = await imageCompression(file, options);
+
+      // Use a fixed path so it overwrites the old one (Cleanup)
+      const storageRef = ref(storage, `profiles/${profile.uid}/avatar`);
+      
+      const uploadTask = uploadBytesResumable(storageRef, compressedFile);
 
       uploadTask.on('state_changed', 
         (snapshot) => {
@@ -47,6 +62,7 @@ export default function Profile() {
         }, 
         (error) => {
           console.error("Upload failed", error);
+          alert('Upload failed. Please try again.');
           setIsUploading(false);
         }, 
         async () => {
@@ -57,6 +73,7 @@ export default function Profile() {
       );
     } catch (error) {
       console.error("Upload error", error);
+      alert('Image processing failed.');
       setIsUploading(false);
     }
   };

@@ -46,6 +46,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
+import imageCompression from 'browser-image-compression';
 import UserProfileModal from '../components/UserProfileModal';
 import { Post, Comment as CommentType } from '../types';
 import { createNotification } from '../lib/notifications';
@@ -111,26 +112,36 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        alert('File is too large (max 10MB)');
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File too large for the Free Tier. Please use a smaller file.');
         return;
       }
       
-      setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-
-      // Start upload immediately
       setIsUploading(true);
       setUploadProgress(0);
+      
       try {
-        const url = await uploadImage(file);
+        const options = {
+          maxSizeMB: 0.2, // Aim for under 200KB
+          maxWidthOrHeight: 1024,
+          useWebWorker: true,
+          initialQuality: 0.7
+        };
+        
+        const compressedFile = await imageCompression(file, options);
+        
+        setSelectedImage(compressedFile);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(compressedFile);
+
+        const url = await uploadImage(compressedFile);
         setUploadedImageUrl(url);
       } catch (error) {
-        alert('Image upload failed. Please try again.');
+        console.error("Compression or upload failed", error);
+        alert('Image processing failed. Please try again.');
         setSelectedImage(null);
         setImagePreview(null);
       } finally {
