@@ -110,6 +110,15 @@ service cloud.firestore {
         && data.createdAt == request.time;
     }
 
+    function isValidResource(data) {
+      return data.keys().hasAll(['title', 'link', 'uploaderId', 'uploaderName', 'createdAt'])
+        && data.title is string && data.title.size() <= 200
+        && data.link is string && data.link.size() <= 2048
+        && data.uploaderId == request.auth.uid
+        && data.createdAt == request.time
+        && (!data.keys().contains('fileName') || data.fileName == null || data.fileName is string);
+    }
+
     // --- Collections ---
 
     // 1. Users
@@ -212,6 +221,13 @@ service cloud.firestore {
         request.auth.uid == resource.data.requesterId || 
         request.auth.uid == resource.data.receiverId
       );
+    }
+
+    // 9. Resources
+    match /resources/{resourceId} {
+      allow read: if isSignedIn();
+      allow create: if isTeacher() && isValidResource(incoming());
+      allow delete: if isTeacher() && resource.data.uploaderId == request.auth.uid;
     }
   }
 }

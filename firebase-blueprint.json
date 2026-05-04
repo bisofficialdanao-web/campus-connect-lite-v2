@@ -141,6 +141,20 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "date", "time", "location", "organizerId"]
+    },
+    "Resource": {
+      "title": "Resource",
+      "description": "Learning materials uploaded or linked by teachers.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "link": { "type": "string" },
+        "fileName": { "type": "string" },
+        "uploaderId": { "type": "string" },
+        "uploaderName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "link", "uploaderId"]
     }
   },
   "firestore": {
@@ -153,6 +167,7 @@
     "/quizzes/{quizId}": { "schema": "Quiz", "description": "Class quizzes." },
     "/quizResults/{resultId}": { "schema": "QuizResult", "description": "Student quiz results." },
     "/friendships/{friendshipId}": { "schema": "Friendship", "description": "User friendship statuses." },
-    "/events/{eventId}": { "schema": "Event", "description": "Campus-wide events." }
+    "/events/{eventId}": { "schema": "Event", "description": "Campus-wide events." },
+    "/resources/{resourceId}": { "schema": "Resource", "description": "Learning materials." }
   }
 }
