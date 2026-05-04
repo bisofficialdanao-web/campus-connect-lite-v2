@@ -1,0 +1,141 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information and role.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["teacher", "student"] },
+        "isApproved": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "isApproved"]
+    },
+    "Class": {
+      "title": "Class",
+      "description": "A subject-based classroom created by a teacher.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "subject": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "studentIds": { "type": "array", "items": { "type": "string" } },
+        "pendingStudentIds": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "subject", "teacherId"]
+    },
+    "Post": {
+      "title": "Campus Post",
+      "description": "A public confession or status update on the Campus feed.",
+      "type": "object",
+      "properties": {
+        "content": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorPhoto": { "type": "string" },
+        "isAnonymous": { "type": "boolean" },
+        "reactions": { "type": "object" },
+        "commentCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["content", "authorId"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "A comment on a campus post.",
+      "type": "object",
+      "properties": {
+        "postId": { "type": "string" },
+        "content": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["postId", "content", "authorId"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A chat message (DM or group chat).",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "receiverId": { "type": "string", "description": "For DMs" },
+        "classId": { "type": "string", "description": "For group chats" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["text", "senderId"]
+    },
+    "Presence": {
+      "title": "Presence",
+      "description": "User online status.",
+      "type": "object",
+      "properties": {
+        "status": { "type": "string", "enum": ["online", "offline"] },
+        "lastSeen": { "type": "string", "format": "date-time" }
+      },
+      "required": ["status", "lastSeen"]
+    },
+    "Quiz": {
+      "title": "Quiz",
+      "description": "An in-app quiz created by a teacher for a class.",
+      "type": "object",
+      "properties": {
+        "classId": { "type": "string" },
+        "title": { "type": "string" },
+        "questions": { "type": "array" },
+        "teacherId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["classId", "title", "questions", "teacherId"]
+    },
+    "QuizResult": {
+      "title": "Quiz Result",
+      "description": "The result of a quiz taken by a student.",
+      "type": "object",
+      "properties": {
+        "quizId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "score": { "type": "integer" },
+        "totalQuestions": { "type": "integer" },
+        "teacherId": { "type": "string" },
+        "classId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["quizId", "studentId", "score", "totalQuestions", "teacherId", "classId"]
+    },
+    "Friendship": {
+      "title": "Friendship",
+      "description": "A relationship between two users (pending or accepted).",
+      "type": "object",
+      "properties": {
+        "requesterId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["requesterId", "receiverId", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles." },
+    "/classes/{classId}": { "schema": "Class", "description": "Classroom data." },
+    "/posts/{postId}": { "schema": "Post", "description": "Public campus posts." },
+    "/posts/{postId}/comments/{commentId}": { "schema": "Comment", "description": "Comments on posts." },
+    "/messages/{messageId}": { "schema": "Message", "description": "Direct and group messages." },
+    "/presence/{userId}": { "schema": "Presence", "description": "Online presence tracking." },
+    "/quizzes/{quizId}": { "schema": "Quiz", "description": "Class quizzes." },
+    "/quizResults/{resultId}": { "schema": "QuizResult", "description": "Student quiz results." },
+    "/friendships/{friendshipId}": { "schema": "Friendship", "description": "User friendship statuses." }
+  }
+}

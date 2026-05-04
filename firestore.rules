@@ -1,0 +1,208 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function getUserData(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+
+    function isTeacher() {
+      return isSignedIn() && getUserData(request.auth.uid).role == 'teacher' && getUserData(request.auth.uid).isApproved == true;
+    }
+
+    // --- Validation Blueprints ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'isApproved', 'createdAt', 'updatedAt', 'displayName', 'photoURL'])
+        && data.keys().size() == 8
+        && data.uid == request.auth.uid
+        && data.role in ['teacher', 'student']
+        && data.isApproved is bool
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    function isValidQuiz(data) {
+      return data.keys().hasAll(['classId', 'title', 'questions', 'teacherId', 'createdAt'])
+        && data.keys().size() == 5
+        && data.title is string && data.title.size() <= 200
+        && data.questions is list && data.questions.size() > 0
+        && data.teacherId == request.auth.uid
+        && data.createdAt == request.time;
+    }
+
+    function isValidQuizResult(data) {
+      return data.keys().hasAll(['quizId', 'studentId', 'studentName', 'score', 'totalQuestions', 'teacherId', 'classId', 'createdAt'])
+        && data.keys().size() == 8
+        && data.score is int
+        && data.totalQuestions is int
+        && data.studentId == request.auth.uid
+        && data.createdAt == request.time;
+    }
+
+    function isValidFriendship(data) {
+      return data.keys().hasAll(['requesterId', 'receiverId', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().size() == 5
+        && data.requesterId == request.auth.uid
+        && data.requesterId != data.receiverId
+        && data.status in ['pending', 'accepted']
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    function isValidPost(data) {
+      return data.keys().hasAll(['content', 'authorId', 'authorName', 'authorPhoto', 'reactions', 'commentCount', 'createdAt', 'updatedAt'])
+        && data.keys().size() == 8
+        && data.content is string && data.content.size() <= 1000
+        && data.authorId == request.auth.uid
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    function isValidClass(data) {
+      return data.keys().hasAll(['name', 'subject', 'teacherId', 'studentIds', 'pendingStudentIds', 'createdAt'])
+        && data.keys().size() == 6
+        && data.name is string && data.name.size() <= 100
+        && data.subject is string && data.subject.size() <= 100
+        && data.teacherId == request.auth.uid
+        && data.createdAt == request.time;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAny(['text', 'senderId', 'senderName', 'receiverId', 'classId', 'createdAt'])
+        && data.text is string && data.text.size() <= 2000
+        && data.senderId == request.auth.uid
+        && data.createdAt == request.time;
+    }
+
+    // --- Collections ---
+
+    // 1. Users
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) 
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'updatedAt'])
+        && incoming().updatedAt == request.time;
+      // Note: Approval and Role change should ideally be handled by a secure backend or an admin, 
+      // but for this lite app version we assume self-registration is the starting point.
+      // We protect the role from being updated by the user themselves in the update block.
+    }
+
+    // 2. Classes
+    match /classes/{classId} {
+      allow read: if isSignedIn();
+      allow create: if isTeacher() && isValidClass(incoming());
+      allow update: if isSignedIn() && (
+        // Teacher updates class details
+        (isOwner(existing().teacherId) && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'subject', 'studentIds', 'pendingStudentIds'])) ||
+        // Student joins (requests)
+        (!isTeacher() && incoming().diff(existing()).affectedKeys().hasOnly(['pendingStudentIds']) && incoming().pendingStudentIds.hasAll(existing().pendingStudentIds))
+      );
+      allow delete: if isSignedIn() && isOwner(existing().teacherId);
+    }
+
+    // 3. Posts
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidPost(incoming());
+      allow update: if isSignedIn() && (
+        // Author edits
+        (isOwner(existing().authorId) && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'updatedAt']) && incoming().updatedAt == request.time) ||
+        // Anyone reacts
+        (incoming().diff(existing()).affectedKeys().hasOnly(['reactions'])) ||
+        // Comment count update (ideally atomic but for lite we allow)
+        (incoming().diff(existing()).affectedKeys().hasOnly(['commentCount']))
+      );
+      allow delete: if isSignedIn() && isOwner(existing().authorId);
+      
+      match /comments/{commentId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() 
+          && incoming().authorId == request.auth.uid
+          && incoming().createdAt == request.time;
+        allow delete: if isSignedIn() && (isOwner(existing().authorId) || isOwner(get(/databases/$(database)/documents/posts/$(postId)).data.authorId));
+      }
+    }
+
+    // 4. Messages
+    match /messages/{messageId} {
+      allow read: if isSignedIn() && (
+        resource.data.senderId == request.auth.uid || 
+        resource.data.receiverId == request.auth.uid ||
+        (resource.data.classId != null && request.auth.uid in get(/databases/$(database)/documents/classes/$(resource.data.classId)).data.studentIds) ||
+        (resource.data.classId != null && request.auth.uid == get(/databases/$(database)/documents/classes/$(resource.data.classId)).data.teacherId)
+      );
+      allow create: if isSignedIn() && isValidMessage(incoming());
+    }
+
+    // 5. Presence
+    match /presence/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId);
+    }
+    
+    // 6. Quizzes
+    match /quizzes/{quizId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == resource.data.teacherId ||
+        request.auth.uid in get(/databases/$(database)/documents/classes/$(resource.data.classId)).data.studentIds
+      );
+      allow create: if isTeacher() && isValidQuiz(incoming());
+      allow delete: if isTeacher() && resource.data.teacherId == request.auth.uid;
+    }
+
+    // 7. Quiz Results
+    match /quizResults/{resultId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == resource.data.studentId ||
+        request.auth.uid == resource.data.teacherId
+      );
+      allow create: if isSignedIn() && isValidQuizResult(incoming());
+    }
+
+    // 8. Friendships
+    match /friendships/{friendshipId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == resource.data.requesterId || 
+        request.auth.uid == resource.data.receiverId
+      );
+      allow create: if isSignedIn() && isValidFriendship(incoming());
+      allow update: if isSignedIn() && (
+        // Receiver accepts
+        (request.auth.uid == existing().receiverId && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) && incoming().status == 'accepted' && incoming().updatedAt == request.time)
+      );
+      allow delete: if isSignedIn() && (
+        request.auth.uid == resource.data.requesterId || 
+        request.auth.uid == resource.data.receiverId
+      );
+    }
+  }
+}
