@@ -656,11 +656,12 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
       <div>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <button 
+            <motion.button 
+              whileTap={!post.isAnonymous ? { scale: 0.95 } : {}}
               onClick={() => !post.isAnonymous && onUserClick(post.authorId)}
               className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center overflow-hidden border border-brand-border/30 shadow-inner transition-transform active:scale-95",
-                post.isAnonymous ? "bg-brand-ink border-brand-ink cursor-default" : "bg-brand-bg border-brand-border"
+                "w-10 h-10 rounded-full flex items-center justify-center overflow-hidden border border-brand-border/30 shadow-inner transition-transform",
+                post.isAnonymous ? "bg-brand-ink border-brand-ink cursor-default" : "bg-brand-bg border-brand-border cursor-pointer hover:border-brand-primary/30"
               )}
             >
               {displayPhoto ? (
@@ -670,13 +671,13 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
               ) : (
                 <span className="text-sm font-black text-brand-primary uppercase">{post.authorName?.[0] || 'U'}</span>
               )}
-            </button>
+            </motion.button>
             <div className="text-left">
               <button 
                 onClick={() => !post.isAnonymous && onUserClick(post.authorId)}
                 className={cn(
                   "text-sm font-black tracking-tight flex items-center gap-1.5 hover:underline decoration-brand-border",
-                  post.isAnonymous ? "text-brand-ink/60 no-underline cursor-default" : "text-brand-ink"
+                  post.isAnonymous ? "text-brand-ink/60 no-underline cursor-default" : "text-brand-ink cursor-pointer"
                 )}
               >
                 {post.isAnonymous ? 'Anonymous Member' : post.authorName}
@@ -843,13 +844,19 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
       </div>
 
       <AnimatePresence>
-        {showComments && <CommentsList postId={post.id} currentCommentCount={post.commentCount} />}
+        {showComments && (
+          <CommentsList 
+            postId={post.id} 
+            currentCommentCount={post.commentCount} 
+            onUserClick={onUserClick}
+          />
+        )}
       </AnimatePresence>
     </motion.div>
   );
 }
 
-function CommentsList({ postId, currentCommentCount }: { postId: string, currentCommentCount: number }) {
+function CommentsList({ postId, currentCommentCount, onUserClick }: { postId: string, currentCommentCount: number, onUserClick: (uid: string) => void }) {
   const { user, profile, auth } = useAuth();
   const [comments, setComments] = useState<CommentType[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -943,6 +950,7 @@ function CommentsList({ postId, currentCommentCount }: { postId: string, current
                 comment={c} 
                 onDelete={() => handleCommentDelete(c.id)}
                 onUpdate={(content) => handleCommentUpdate(c.id, content)}
+                onUserClick={onUserClick}
               />
             ))}
           </div>
@@ -968,7 +976,7 @@ function CommentsList({ postId, currentCommentCount }: { postId: string, current
   );
 }
 
-function CommentItem({ comment, onDelete, onUpdate }: { comment: CommentType, onDelete: () => void, onUpdate: (content: string) => void }) {
+function CommentItem({ comment, onDelete, onUpdate, onUserClick }: { comment: CommentType, onDelete: () => void, onUpdate: (content: string) => void, onUserClick: (uid: string) => void }) {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
@@ -979,14 +987,23 @@ function CommentItem({ comment, onDelete, onUpdate }: { comment: CommentType, on
   };
 
   return (
-    <div className="flex gap-2 group/item">
-      <div className="w-6 h-6 rounded-md bg-brand-surface border border-brand-border/30 flex items-center justify-center shrink-0 overflow-hidden">
+    <div className="flex gap-2 group/item text-left">
+      <motion.button 
+        whileTap={{ scale: 0.95 }}
+        onClick={() => onUserClick(comment.authorId)}
+        className="w-6 h-6 rounded-md bg-brand-surface border border-brand-border/30 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer hover:border-brand-primary/30 shadow-sm"
+      >
          {comment.authorPhoto ? <img src={comment.authorPhoto} className="w-full h-full object-cover" /> : <div className="text-[10px] font-bold text-brand-primary uppercase">{comment.authorName?.[0]}</div>}
-      </div>
+      </motion.button>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-0.5">
           <div className="flex items-center gap-1.5">
-            <span className="text-[9px] font-black text-brand-primary uppercase tracking-wider">{comment.authorName}</span>
+            <button 
+              onClick={() => onUserClick(comment.authorId)}
+              className="text-[9px] font-black text-brand-primary uppercase tracking-wider hover:underline"
+            >
+              {comment.authorName}
+            </button>
             <span className="text-[8px] font-bold text-brand-secondary opacity-50 uppercase tracking-tighter">
               {comment.createdAt?.toDate ? formatDistanceToNow(comment.createdAt.toDate(), { addSuffix: true }) : 'just now'}
             </span>
