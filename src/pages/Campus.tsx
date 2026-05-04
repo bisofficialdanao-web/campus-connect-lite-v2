@@ -42,7 +42,7 @@ import {
   deleteDoc
 } from 'firebase/firestore';
 import { db, storage } from '../lib/firebase';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
@@ -150,27 +150,19 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
     }
   };
 
-  const uploadImage = (blob: Blob, fileName: string): Promise<string | null> => {
-    return new Promise((resolve, reject) => {
-      if (!user) return resolve(null);
+  const uploadImage = async (blob: Blob, fileName: string): Promise<string | null> => {
+    if (!user) return null;
+    try {
       const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${fileName}`);
-      const uploadTask = uploadBytesResumable(storageRef, blob, { contentType: 'image/webp' });
-
-      uploadTask.on('state_changed', 
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setUploadProgress(progress);
-        }, 
-        (error) => {
-          console.error("Upload failed", error);
-          reject(error);
-        }, 
-        async () => {
-          const downloadURL = await getDownloadURL(storageRef);
-          resolve(downloadURL);
-        }
-      );
-    });
+      setUploadProgress(10); // Start progress
+      const snapshot = await uploadBytes(storageRef, blob, { contentType: 'image/webp' });
+      setUploadProgress(100); // Complete progress
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      return downloadURL;
+    } catch (error) {
+      console.error("Upload failed", error);
+      throw error;
+    }
   };
 
   useEffect(() => {
@@ -494,18 +486,10 @@ function ModuleModal({ onClose }: { onClose: () => void }) {
       let fileUrl = '';
       if (file) {
         const storageRef = ref(storage, `modules/${user.uid}/${Date.now()}_${file.name}`);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-        
-        await new Promise((resolve, reject) => {
-          uploadTask.on('state_changed', 
-            (snap) => setProgress((snap.bytesTransferred / snap.totalBytes) * 100),
-            reject,
-            async () => {
-              fileUrl = await getDownloadURL(storageRef);
-              resolve(null);
-            }
-          );
-        });
+        setProgress(10);
+        const snapshot = await uploadBytes(storageRef, file);
+        setProgress(100);
+        fileUrl = await getDownloadURL(snapshot.ref);
       }
 
       await addDoc(collection(db, 'posts'), {

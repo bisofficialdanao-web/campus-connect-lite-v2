@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { User, ShieldCheck, Mail, LogOut, Edit3, Camera, Save, X, GraduationCap, BookOpen, AlertCircle, Upload, Loader2 } from 'lucide-react';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { regulateImage } from '../lib/imageRegulator';
 import { db, storage } from '../lib/firebase';
 import { cn } from '../lib/utils';
@@ -49,23 +49,10 @@ export default function Profile() {
       // Use a fixed path so it overwrites the old one (Cleanup)
       const storageRef = ref(storage, `profiles/${profile.uid}/avatar`);
       
-      const uploadTask = uploadBytesResumable(storageRef, compressedBlob, { contentType: 'image/webp' });
-
-      uploadTask.on('state_changed', 
-        (snapshot) => {
-          // Progress can be handled here if needed
-        }, 
-        (error) => {
-          console.error("Upload failed", error);
-          alert('Upload failed. Please try again.');
-          setIsUploading(false);
-        }, 
-        async () => {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          setPhotoURL(downloadURL);
-          setIsUploading(false);
-        }
-      );
+      const snapshot = await uploadBytes(storageRef, compressedBlob, { contentType: 'image/webp' });
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      setPhotoURL(downloadURL);
+      setIsUploading(false);
     } catch (error) {
       console.error("Upload error", error);
       alert('Image processing failed.');
