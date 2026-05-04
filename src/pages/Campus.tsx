@@ -25,7 +25,8 @@ import {
   Share2,
   BookOpen,
   Download,
-  FileText
+  FileText,
+  CheckCircle
 } from 'lucide-react';
 import { 
   collection, 
@@ -273,7 +274,7 @@ export default function Campus() {
             </div>
 
             {imagePreview && (
-              <div className="relative w-full max-h-64 rounded-2xl overflow-hidden border border-brand-border/30 bg-brand-bg group ml-14">
+              <div className="relative w-full max-h-64 rounded-2xl overflow-hidden border border-brand-border/30 bg-brand-bg group ml-0 sm:ml-14">
                 <img src={imagePreview} alt="Preview" className="w-full h-full object-contain" />
                 
                 {isUploading && (
@@ -289,6 +290,13 @@ export default function Campus() {
                   </div>
                 )}
 
+                {uploadedImageUrl && !isUploading && (
+                  <div className="absolute top-2 left-2 flex items-center gap-1.5 px-3 py-1 bg-green-500 text-white rounded-full shadow-lg">
+                    <CheckCircle size={12} />
+                    <span className="text-[9px] font-black uppercase tracking-widest">Ready</span>
+                  </div>
+                )}
+
                 <button 
                   type="button"
                   disabled={isUploading}
@@ -297,7 +305,7 @@ export default function Campus() {
                     setImagePreview(null); 
                     setUploadedImageUrl(null);
                   }}
-                  className="absolute top-2 right-2 p-1.5 bg-brand-ink/80 text-white rounded-full hover:bg-brand-ink transition-colors disabled:opacity-0"
+                  className="absolute top-2 right-2 p-1.5 bg-brand-ink/80 text-white rounded-full hover:bg-brand-ink transition-all active:scale-95 disabled:hidden"
                 >
                   <X size={14} />
                 </button>
