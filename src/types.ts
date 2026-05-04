@@ -40,6 +40,7 @@ export interface Comment {
   content: string;
   authorId: string;
   authorName: string;
+  authorPhoto?: string;
   createdAt: any;
 }
 

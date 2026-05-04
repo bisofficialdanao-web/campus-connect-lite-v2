@@ -80,15 +80,15 @@ export default function Profile() {
   };
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-4 pb-20">
       {/* Profile Card */}
-      <div className="bg-brand-surface border-2 border-brand-border rounded-[40px] p-8 shadow-sm flex flex-col items-center">
-        <div className="relative group mb-6">
-          <div className="w-24 h-24 rounded-[32px] bg-brand-bg border-2 border-brand-border flex items-center justify-center overflow-hidden shadow-inner group-hover:border-brand-primary transition-all">
+      <div className="bg-brand-surface border border-brand-border/50 rounded-2xl p-6 shadow-sm flex flex-col items-center">
+        <div className="relative group mb-4">
+          <div className="w-20 h-20 rounded-2xl bg-brand-bg border border-brand-border/50 flex items-center justify-center overflow-hidden shadow-inner group-hover:border-brand-primary transition-all">
             {profile?.photoURL ? (
               <img src={profile.photoURL} alt={profile.displayName} className="w-full h-full object-cover" />
             ) : (
-              <User size={40} className="text-brand-secondary" />
+              <User size={32} className="text-brand-secondary" />
             )}
           </div>
           {isEditing && (
@@ -98,23 +98,23 @@ export default function Profile() {
           )}
         </div>
 
-        <h3 className="text-2xl font-black text-brand-ink tracking-tight mb-1">{profile?.displayName || 'Anonymous'}</h3>
-        <div className="flex items-center gap-2 mb-8">
+        <h3 className="text-xl font-black text-brand-ink tracking-tight mb-1">{profile?.displayName || 'Anonymous'}</h3>
+        <div className="flex items-center gap-2 mb-6">
            <span className={cn(
-             "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5",
+             "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5",
              profile?.role === 'teacher' ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
            )}>
-             {profile?.role === 'teacher' ? <GraduationCap size={12} /> : <BookOpen size={12} />}
+             {profile?.role === 'teacher' ? <GraduationCap size={10} /> : <BookOpen size={10} />}
              {profile?.role}
            </span>
            {profile?.isApproved ? (
-             <span className="bg-green-100 text-green-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-               <ShieldCheck size={12} />
+             <span className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+               <ShieldCheck size={10} />
                Approved
              </span>
            ) : (
-             <span className="bg-orange-100 text-orange-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-               <AlertCircle size={12} />
+             <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+               <AlertCircle size={10} />
                Pending
              </span>
            )}
@@ -205,24 +205,24 @@ export default function Profile() {
       </div>
 
       {/* Info Sections */}
-      <div className="grid grid-cols-1 gap-4">
-        <div className="bg-brand-surface border-2 border-brand-border rounded-3xl p-6 flex items-center justify-between">
+      <div className="grid grid-cols-1 gap-3">
+        <div className="bg-brand-surface border border-brand-border/50 rounded-2xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-brand-bg rounded-xl"><Mail className="text-brand-secondary" size={18} /></div>
+            <div className="p-1.5 bg-brand-bg rounded-lg border border-brand-border/30"><Mail className="text-brand-secondary" size={16} /></div>
             <div>
-              <p className="text-[10px] font-black uppercase text-brand-secondary tracking-widest">Email Address</p>
-              <p className="font-bold text-sm">{profile?.email}</p>
+              <p className="text-[9px] font-black uppercase text-brand-secondary tracking-widest">Email Address</p>
+              <p className="font-bold text-xs">{profile?.email}</p>
             </div>
           </div>
         </div>
 
         <button 
           onClick={logout}
-          className="bg-red-50 border-2 border-red-100 p-6 rounded-3xl flex items-center justify-between group hover:bg-red-100 transition-all"
+          className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center justify-between group hover:bg-red-100 transition-all active:scale-[0.98]"
         >
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-xl group-hover:bg-red-200 transition-all"><LogOut className="text-red-600" size={18} /></div>
-            <span className="font-black text-red-600 text-sm uppercase tracking-widest">Sign Out</span>
+            <div className="p-1.5 bg-red-100 rounded-lg group-hover:bg-red-200 transition-all"><LogOut className="text-red-600" size={16} /></div>
+            <span className="font-black text-red-600 text-xs uppercase tracking-widest">Sign Out</span>
           </div>
         </button>
       </div>

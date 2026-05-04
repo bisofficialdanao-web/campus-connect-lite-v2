@@ -1,6 +1,7 @@
 import React from 'react';
 import { BookOpen, Users, MessageCircle, User } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { motion } from 'motion/react';
 
 export type PageView = 'library' | 'campus' | 'chats' | 'profile';
 
@@ -18,22 +19,25 @@ export default function BottomNav({ currentView, onViewChange }: BottomNavProps)
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 h-16 bg-brand-surface border-t border-brand-border flex items-center justify-around px-4 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 h-14 bg-brand-surface/80 backdrop-blur-md border-t border-brand-border/50 flex items-center justify-around px-2 z-50">
       {items.map((item) => (
         <button
           key={item.id}
           onClick={() => onViewChange(item.id as PageView)}
           className={cn(
-            "flex flex-col items-center justify-center gap-1 transition-all",
+            "flex flex-col items-center justify-center gap-0.5 transition-all relative flex-1 h-full active:scale-90",
             currentView === item.id 
               ? "text-brand-primary" 
-              : "text-brand-secondary hover:text-brand-ink"
+              : "text-brand-secondary"
           )}
         >
-          <item.icon size={22} strokeWidth={currentView === item.id ? 2.5 : 2} />
-          <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
+          <item.icon size={18} strokeWidth={currentView === item.id ? 2.5 : 2} />
+          <span className="text-[8px] font-black uppercase tracking-[0.1em]">{item.label}</span>
           {currentView === item.id && (
-            <div className="absolute top-0 w-8 h-1 bg-brand-primary rounded-b-full" />
+            <motion.div 
+              layoutId="navTab"
+              className="absolute top-0 w-8 h-0.5 bg-brand-primary rounded-b-full" 
+            />
           )}
         </button>
       ))}

@@ -12,8 +12,8 @@ export default function Layout({ children, currentView, onViewChange }: LayoutPr
   return (
     <div className="min-h-screen flex flex-col bg-brand-bg select-none">
       <Header />
-      <main className="flex-1 pt-14 pb-16 overflow-y-auto no-scrollbar">
-        <div className="max-w-2xl mx-auto w-full px-4 py-6">
+      <main className="flex-1 pt-14 pb-14 overflow-y-auto no-scrollbar">
+        <div className="max-w-2xl mx-auto w-full px-3.5 py-4">
           {children}
         </div>
       </main>

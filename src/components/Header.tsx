@@ -10,8 +10,15 @@ import UserProfileModal from './UserProfileModal';
 export default function Header() {
   const { user, profile, logout } = useAuth();
   const [showPresence, setShowPresence] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<{ id: string, name: string }[]>([]);
   const [selectedUserUid, setSelectedUserUid] = useState<string | null>(null);
+  
+  // Mock notifications for demonstration
+  const notifications = [
+    { id: '1', text: 'New announcement in Math 101', time: '2m' },
+    { id: '2', text: 'Your assignment was graded', time: '1h' },
+  ];
 
   useEffect(() => {
     if (!user) return;
@@ -108,20 +115,59 @@ export default function Header() {
       </div>
 
       {/* Right Icons */}
-      <div className="flex items-center gap-3">
-        <button className="relative p-1 text-brand-secondary hover:text-brand-primary transition-colors">
-          <Bell size={20} />
-          <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border border-white" />
-        </button>
-        <div className="w-8 h-8 rounded-full bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center overflow-hidden">
+      <div className="flex items-center gap-2">
+        <div className="relative">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowNotifications(!showNotifications);
+            }}
+            className={cn(
+              "relative p-1.5 rounded-lg text-brand-secondary hover:text-brand-primary transition-all active:scale-95",
+              showNotifications && "bg-brand-primary/10 text-brand-primary"
+            )}
+          >
+            <Bell size={18} />
+            <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white" />
+          </button>
+
+          <AnimatePresence>
+            {showNotifications && (
+              <>
+                <div className="fixed inset-0 z-50 cursor-default" onClick={() => setShowNotifications(false)} />
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                  className="fixed sm:absolute right-4 top-14 sm:top-auto sm:right-0 sm:mt-2 w-[calc(100vw-32px)] sm:w-64 bg-brand-surface border border-brand-border shadow-huge rounded-2xl overflow-hidden py-2 z-[60]"
+                >
+                  <div className="px-3 py-1.5 text-[10px] font-black text-brand-secondary uppercase tracking-widest border-b border-brand-border/50 mb-1">
+                    Notifications
+                  </div>
+                  {notifications.map(n => (
+                    <div key={n.id} className="px-3 py-2.5 hover:bg-brand-bg transition-colors cursor-pointer group border-b border-brand-border/30 last:border-0 text-left">
+                      <div className="text-sm font-medium leading-snug group-hover:text-brand-primary transition-colors">{n.text}</div>
+                      <div className="text-[10px] text-brand-secondary mt-0.5">{n.time} ago</div>
+                    </div>
+                  ))}
+                  <button className="w-full py-2 text-[10px] font-black text-brand-primary hover:bg-brand-bg uppercase tracking-widest">
+                    View All
+                  </button>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div className="w-7 h-7 rounded-full bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center overflow-hidden">
           {profile?.photoURL ? (
             <img src={profile.photoURL} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           ) : (
-            <User size={18} className="text-brand-primary" />
+            <User size={16} className="text-brand-primary" />
           )}
         </div>
-        <button onClick={logout} className="p-1 text-brand-secondary hover:text-red-500 transition-colors">
-          <LogOut size={18} />
+        <button onClick={logout} className="p-1.5 text-brand-secondary hover:text-red-500 transition-all active:scale-95">
+          <LogOut size={16} />
         </button>
       </div>
     </header>
