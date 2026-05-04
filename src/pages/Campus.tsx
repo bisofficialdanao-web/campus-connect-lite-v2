@@ -17,7 +17,9 @@ import {
   MessageCircle,
   Ghost,
   Trash2,
-  Edit3
+  Edit3,
+  Loader2,
+  X
 } from 'lucide-react';
 import { 
   collection, 
@@ -32,7 +34,8 @@ import {
   arrayRemove,
   deleteDoc
 } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, storage } from '../lib/firebase';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
@@ -47,6 +50,51 @@ export default function Campus() {
   const [loading, setLoading] = useState(true);
   const [isPosting, setIsPosting] = useState(false);
   const [selectedUserUid, setSelectedUserUid] = useState<string | null>(null);
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File is too large (max 10MB)');
+        return;
+      }
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = (file: File): Promise<string | null> => {
+    return new Promise((resolve, reject) => {
+      if (!user) return resolve(null);
+      const storageRef = ref(storage, `campus/${user.uid}/${Date.now()}_${file.name}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+        }, 
+        (error) => {
+          console.error("Upload failed", error);
+          reject(error);
+        }, 
+        async () => {
+          const downloadURL = await getDownloadURL(storageRef);
+          resolve(downloadURL);
+        }
+      );
+    });
+  };
 
   useEffect(() => {
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
@@ -63,12 +111,20 @@ export default function Campus() {
 
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPost.trim() || !user || isPosting) return;
+    if ((!newPost.trim() && !selectedImage) || !user || isPosting) return;
 
     setIsPosting(true);
     try {
+      let imageUrl = null;
+      if (selectedImage) {
+        setIsUploading(true);
+        imageUrl = await uploadImage(selectedImage);
+        setIsUploading(false);
+      }
+
       await addDoc(collection(db, 'posts'), {
         content: newPost,
+        imageUrl,
         authorId: user.uid,
         authorName: profile?.displayName || 'Anonymous',
         authorPhoto: profile?.photoURL || null,
@@ -79,11 +135,14 @@ export default function Campus() {
         commentCount: 0
       });
       setNewPost('');
+      setSelectedImage(null);
+      setImagePreview(null);
       setIsAnonymous(false);
     } catch (error) {
       console.error("Error adding post:", error);
     } finally {
       setIsPosting(false);
+      setIsUploading(false);
     }
   };
 
@@ -125,6 +184,35 @@ export default function Campus() {
                 onChange={(e) => setNewPost(e.target.value)}
               />
             </div>
+
+            {imagePreview && (
+              <div className="relative w-full max-h-64 rounded-xl overflow-hidden border border-brand-border/30 bg-brand-bg group">
+                <img src={imagePreview} alt="Preview" className="w-full h-full object-contain" />
+                
+                {isUploading && (
+                  <div className="absolute inset-0 bg-brand-ink/40 flex flex-col items-center justify-center backdrop-blur-[2px]">
+                    <div className="w-24 h-1 bg-white/20 rounded-full overflow-hidden mb-2">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${uploadProgress}%` }}
+                        className="h-full bg-brand-primary"
+                      />
+                    </div>
+                    <span className="text-[10px] font-black text-white uppercase tracking-widest">{Math.round(uploadProgress)}%</span>
+                  </div>
+                )}
+
+                <button 
+                  type="button"
+                  disabled={isUploading}
+                  onClick={() => { setSelectedImage(null); setImagePreview(null); }}
+                  className="absolute top-2 right-2 p-1.5 bg-brand-ink/80 text-white rounded-full hover:bg-brand-ink transition-colors disabled:opacity-0"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center justify-between pt-2 border-t border-brand-border/30">
               <div className="flex items-center gap-1">
                 <button 
@@ -140,15 +228,28 @@ export default function Campus() {
                 </button>
                 <div className="flex px-1">
                   <button type="button" className="p-1.5 text-brand-secondary hover:text-brand-primary transition-colors"><Smile size={16} /></button>
-                  <button type="button" className="p-1.5 text-brand-secondary hover:text-brand-primary transition-colors"><ImageIcon size={16} /></button>
+                  <button 
+                    type="button" 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-1.5 text-brand-secondary hover:text-brand-primary transition-colors"
+                  >
+                    <ImageIcon size={16} />
+                  </button>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    onChange={handleImageSelect}
+                    accept="image/*"
+                    className="hidden"
+                  />
                 </div>
               </div>
               <button 
                 type="submit"
-                disabled={!newPost.trim() || isPosting}
-                className="bg-brand-primary text-white p-2 rounded-xl hover:scale-95 transition-all disabled:opacity-50 disabled:scale-100 shadow-md"
+                disabled={(!newPost.trim() && !selectedImage) || isPosting || isUploading}
+                className="bg-brand-primary text-white p-2 rounded-xl hover:scale-95 transition-all disabled:opacity-50 disabled:scale-100 shadow-md flex items-center justify-center min-w-[36px]"
               >
-                <Send size={16} />
+                {(isPosting || isUploading) ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
               </button>
             </div>
           </form>
@@ -175,6 +276,7 @@ export default function Campus() {
                   key={post.id} 
                   post={post} 
                   onUserClick={(uid) => setSelectedUserUid(uid)}
+                  onImageClick={(url) => setViewingImage(url)}
                 />
               ))}
             </AnimatePresence>
@@ -212,12 +314,33 @@ export default function Campus() {
         {selectedUserUid && (
           <UserProfileModal targetUid={selectedUserUid} onClose={() => setSelectedUserUid(null)} />
         )}
+        {viewingImage && (
+          <div 
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-brand-ink/95 backdrop-blur-md"
+            onClick={() => setViewingImage(null)}
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="relative max-w-full max-h-full"
+            >
+              <img src={viewingImage} alt="Full view" className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-huge" />
+              <button 
+                className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-colors"
+                onClick={() => setViewingImage(null)}
+              >
+                <X size={32} />
+              </button>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
     </div>
   );
 }
 
-function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string) => void }) {
+function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick: (uid: string) => void, onImageClick: (url: string) => void }) {
   const { user } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -324,9 +447,25 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
             </div>
           </div>
         ) : (
-          <p className="text-brand-ink text-sm font-medium leading-relaxed mb-4 whitespace-pre-wrap">
-            {post.content}
-          </p>
+          <div className="space-y-3 mb-4">
+            <p className="text-brand-ink text-sm font-medium leading-relaxed whitespace-pre-wrap">
+              {post.content}
+            </p>
+            {post.imageUrl && (
+              <div 
+                onClick={() => onImageClick(post.imageUrl!)}
+                className="rounded-xl overflow-hidden border border-brand-border/30 bg-brand-bg group/img relative cursor-zoom-in active:scale-[0.98] transition-transform"
+              >
+                <img 
+                  src={post.imageUrl} 
+                  alt="Post content" 
+                  className="w-full max-h-80 object-cover transition-transform duration-500 group-hover/img:scale-105" 
+                  referrerPolicy="no-referrer" 
+                />
+                <div className="absolute inset-0 bg-brand-ink/0 group-hover/img:bg-brand-ink/5 transition-colors" />
+              </div>
+            )}
+          </div>
         )}
 
         <div className="flex items-center gap-3 pt-3 border-t border-brand-border/30">
@@ -410,6 +549,24 @@ function CommentsList({ postId, currentCommentCount }: { postId: string, current
     }
   };
 
+  const handleCommentDelete = async (commentId: string) => {
+    if (confirm('Delete this comment?')) {
+      await deleteDoc(doc(db, `posts/${postId}/comments`, commentId));
+      const postRef = doc(db, 'posts', postId);
+      await updateDoc(postRef, {
+        commentCount: Math.max(0, currentCommentCount - 1)
+      });
+    }
+  };
+
+  const handleCommentUpdate = async (commentId: string, content: string) => {
+    if (!content.trim()) return;
+    await updateDoc(doc(db, `posts/${postId}/comments`, commentId), {
+      content,
+      updatedAt: serverTimestamp()
+    });
+  };
+
   return (
     <motion.div 
       initial={{ height: 0, opacity: 0 }}
@@ -419,22 +576,14 @@ function CommentsList({ postId, currentCommentCount }: { postId: string, current
     >
       <div className="p-3.5 space-y-3">
         {comments.length > 0 && (
-          <div className="space-y-2 mb-4">
+          <div className="space-y-4 mb-4">
             {comments.map((c) => (
-              <div key={c.id} className="flex gap-2">
-                <div className="w-6 h-6 rounded-md bg-brand-surface border border-brand-border/30 flex items-center justify-center shrink-0 overflow-hidden">
-                   {c.authorPhoto ? <img src={c.authorPhoto} className="w-full h-full object-cover" /> : <div className="text-[10px] font-bold text-brand-primary uppercase">{c.authorName?.[0]}</div>}
-                </div>
-                <div className="flex-1 bg-brand-surface border border-brand-border/30 p-2 rounded-xl">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[9px] font-black text-brand-primary uppercase tracking-wider">{c.authorName}</span>
-                    <span className="text-[8px] font-bold text-brand-secondary opacity-50 uppercase">
-                      {c.createdAt ? formatDistanceToNow(c.createdAt.toDate()) : 'just now'}
-                    </span>
-                  </div>
-                  <p className="text-xs font-medium text-brand-ink leading-snug">{c.content}</p>
-                </div>
-              </div>
+              <CommentItem 
+                key={c.id} 
+                comment={c} 
+                onDelete={() => handleCommentDelete(c.id)}
+                onUpdate={(content) => handleCommentUpdate(c.id, content)}
+              />
             ))}
           </div>
         )}
@@ -451,10 +600,66 @@ function CommentsList({ postId, currentCommentCount }: { postId: string, current
             disabled={!newComment.trim() || isCommenting}
             className="bg-brand-ink text-white p-1.5 rounded-lg disabled:opacity-50 transition-all active:scale-95"
           >
-            <Send size={14} />
+            {isCommenting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
           </button>
         </form>
       </div>
     </motion.div>
+  );
+}
+
+function CommentItem({ comment, onDelete, onUpdate }: { comment: CommentType, onDelete: () => void, onUpdate: (content: string) => void }) {
+  const { user } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(comment.content);
+
+  const handleSave = () => {
+    onUpdate(editContent);
+    setIsEditing(false);
+  };
+
+  return (
+    <div className="flex gap-2 group/item">
+      <div className="w-6 h-6 rounded-md bg-brand-surface border border-brand-border/30 flex items-center justify-center shrink-0 overflow-hidden">
+         {comment.authorPhoto ? <img src={comment.authorPhoto} className="w-full h-full object-cover" /> : <div className="text-[10px] font-bold text-brand-primary uppercase">{comment.authorName?.[0]}</div>}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-0.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[9px] font-black text-brand-primary uppercase tracking-wider">{comment.authorName}</span>
+            <span className="text-[8px] font-bold text-brand-secondary opacity-50 uppercase tracking-tighter">
+              {comment.createdAt?.toDate ? formatDistanceToNow(comment.createdAt.toDate()) + ' ago' : 'just now'}
+            </span>
+          </div>
+          {user?.uid === comment.authorId && (
+            <div className="flex gap-0.5 opacity-0 group-hover/item:opacity-100 transition-opacity">
+              <button onClick={() => setIsEditing(!isEditing)} className="p-1 hover:text-brand-primary transition-colors">
+                <Edit3 size={10} />
+              </button>
+              <button onClick={onDelete} className="p-1 hover:text-red-500 transition-colors">
+                <Trash2 size={10} />
+              </button>
+            </div>
+          )}
+        </div>
+        {isEditing ? (
+          <div className="space-y-1.5 mt-1">
+            <textarea 
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              className="w-full bg-white border border-brand-border rounded-lg p-2 text-xs font-medium focus:outline-none min-h-[60px]"
+            />
+            <div className="flex justify-end gap-1.5">
+              <button onClick={() => setIsEditing(false)} className="text-[8px] font-black uppercase text-brand-secondary">Cancel</button>
+              <button onClick={handleSave} className="text-[8px] font-black uppercase text-brand-primary">Save</button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-brand-surface border border-brand-border/30 p-2 rounded-xl">
+             <p className="text-xs font-medium text-brand-ink leading-snug">{comment.content}</p>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

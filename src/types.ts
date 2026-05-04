@@ -27,6 +27,7 @@ export interface Post {
   authorId: string;
   authorName: string;
   authorPhoto: string;
+  imageUrl?: string;
   isAnonymous?: boolean;
   reactions: Record<string, string[]>; // reaction -> userIds
   commentCount: number;
