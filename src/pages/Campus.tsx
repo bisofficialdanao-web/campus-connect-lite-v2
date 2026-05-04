@@ -50,6 +50,8 @@ import UserProfileModal from '../components/UserProfileModal';
 import { Post, Comment as CommentType } from '../types';
 import { createNotification } from '../lib/notifications';
 
+import { PageView } from '../components/BottomNav';
+
 enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
@@ -87,7 +89,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
-export default function Campus() {
+export default function Campus({ onViewChange }: { onViewChange: (view: PageView) => void }) {
   const { user, profile, auth } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [newPost, setNewPost] = useState('');
@@ -212,7 +214,7 @@ export default function Campus() {
       icon: <School size={16} />, 
       label: 'Create Class', 
       color: 'bg-purple-50 text-purple-600 border-purple-100',
-      onClick: () => { window.location.href = '/classes' } 
+      onClick: () => onViewChange('classes') 
     },
     { 
       icon: <Calendar size={16} />, 
@@ -232,7 +234,7 @@ export default function Campus() {
       icon: <ClipboardList size={16} />, 
       label: 'Assignments', 
       color: 'bg-green-50 text-green-600 border-green-100',
-      onClick: () => { window.location.href = '/classes' } 
+      onClick: () => onViewChange('classes') 
     },
   ].filter(a => a.visible !== false);
 

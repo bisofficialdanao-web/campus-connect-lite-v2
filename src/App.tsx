@@ -93,11 +93,12 @@ function AppContent() {
 
   const renderView = () => {
     switch (currentView) {
-      case 'campus': return <Campus />;
+      case 'campus': return <Campus onViewChange={setCurrentView} />;
       case 'library': return <Library />;
+      case 'classes': return <Classes onViewChange={setCurrentView} />;
       case 'chats': return <Chats />;
       case 'profile': return <Profile />;
-      default: return <Campus />;
+      default: return <Campus onViewChange={setCurrentView} />;
     }
   };
 

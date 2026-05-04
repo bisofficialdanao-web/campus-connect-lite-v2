@@ -9,7 +9,9 @@ import { cn } from '../lib/utils';
 import QuizSection from '../components/QuizSection';
 import { createNotification } from '../lib/notifications';
 
-export default function Classes() {
+import { PageView } from '../components/BottomNav';
+
+export default function Classes({ onViewChange }: { onViewChange: (view: PageView) => void }) {
   const { user, profile } = useAuth();
   const [classes, setClasses] = useState<Class[]>([]);
   const [showCreate, setShowCreate] = useState(false);
@@ -47,6 +49,8 @@ export default function Classes() {
       setNewClassName('');
       setNewClassSubject('');
       setShowCreate(false);
+      // Redirection as requested
+      setTimeout(() => onViewChange('library'), 500); 
     } catch (error) {
       console.error("Create class failed", error);
     }

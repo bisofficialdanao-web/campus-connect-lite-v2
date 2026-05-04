@@ -1,9 +1,9 @@
 import React from 'react';
-import { BookOpen, Users, MessageCircle, User } from 'lucide-react';
+import { BookOpen, Users, MessageCircle, User, GraduationCap } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 
-export type PageView = 'library' | 'campus' | 'chats' | 'profile';
+export type PageView = 'library' | 'campus' | 'chats' | 'profile' | 'classes';
 
 interface BottomNavProps {
   currentView: PageView;
@@ -14,6 +14,7 @@ export default function BottomNav({ currentView, onViewChange }: BottomNavProps)
   const items = [
     { id: 'library', icon: BookOpen, label: 'Library' },
     { id: 'campus', icon: Users, label: 'Campus' },
+    { id: 'classes', icon: GraduationCap, label: 'Classes' },
     { id: 'chats', icon: MessageCircle, label: 'Chats' },
     { id: 'profile', icon: User, label: 'Profile' },
   ];
