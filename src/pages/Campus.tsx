@@ -304,42 +304,45 @@ export default function Campus() {
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-2 border-t border-[#f0f0f0] ml-14">
-              <div className="flex items-center gap-2">
-                <button 
-                  type="button"
-                  onClick={() => setIsAnonymous(!isAnonymous)}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-2 rounded-full transition-all font-black text-[10px] uppercase tracking-widest border",
-                    isAnonymous ? "bg-brand-ink text-white border-brand-ink" : "bg-brand-bg text-brand-secondary border-brand-border/50 hover:bg-white"
-                  )}
-                >
-                  <Users size={12} />
-                  {isAnonymous ? 'Anonymous' : 'Public'}
-                </button>
-                <div className="flex items-center">
-                  <button type="button" className="p-2 text-brand-secondary hover:text-brand-primary transition-colors"><Smile size={18} /></button>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-[#f0f0f0] ml-0 sm:ml-14">
+              <div className="flex items-center justify-between sm:justify-start gap-2">
+                <div className="flex items-center gap-2">
                   <button 
-                    type="button" 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-2 text-brand-secondary hover:text-brand-primary transition-colors"
+                    type="button"
+                    onClick={() => setIsAnonymous(!isAnonymous)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-2 rounded-full transition-all font-black text-[10px] uppercase tracking-widest border",
+                      isAnonymous ? "bg-brand-ink text-white border-brand-ink" : "bg-brand-bg text-brand-secondary border-brand-border/50 hover:bg-white"
+                    )}
                   >
-                    <ImageIcon size={18} />
+                    <Users size={12} />
+                    {isAnonymous ? 'Anonymous' : 'Public'}
                   </button>
-                  <input 
-                    type="file" 
-                    ref={fileInputRef}
-                    onChange={handleImageSelect}
-                    accept="image/*"
-                    className="hidden"
-                  />
+                  <div className="flex items-center">
+                    <button type="button" className="p-2 text-brand-secondary hover:text-brand-primary transition-colors"><Smile size={18} /></button>
+                    <button 
+                      type="button" 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="p-2 text-brand-secondary hover:text-brand-primary transition-colors"
+                    >
+                      <ImageIcon size={18} />
+                    </button>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef}
+                      onChange={handleImageSelect}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                  </div>
                 </div>
               </div>
+              
               <motion.button 
                 whileTap={{ scale: 0.98 }}
                 type="submit"
                 disabled={(!newPost.trim() && !uploadedImageUrl) || isPosting || isUploading}
-                className="bg-brand-primary text-white px-6 py-2 rounded-full font-black text-[11px] uppercase tracking-widest hover:brightness-110 active:brightness-95 transition-all disabled:opacity-50 disabled:scale-100 shadow-md flex items-center justify-center gap-2"
+                className="bg-brand-primary text-white px-8 py-3 sm:py-2 rounded-full font-black text-[11px] uppercase tracking-widest hover:brightness-110 active:brightness-95 transition-all disabled:opacity-50 disabled:scale-100 shadow-neon flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 {isPosting ? <Loader2 size={16} className="animate-spin" /> : <>Post <Send size={14} /></>}
               </motion.button>

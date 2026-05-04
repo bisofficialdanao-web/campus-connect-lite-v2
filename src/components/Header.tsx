@@ -139,7 +139,7 @@ export default function Header() {
             id="notification-bell"
             onClick={() => setShowNotifications(!showNotifications)}
             className={cn(
-              "relative p-1.5 rounded-lg text-brand-secondary hover:text-brand-primary transition-all active:scale-95 z-[61]",
+              "relative p-1.5 rounded-lg text-brand-secondary hover:text-brand-primary transition-all active:scale-95 z-[61] shadow-neon border border-brand-border/10",
               showNotifications && "bg-brand-primary/10 text-brand-primary"
             )}
           >
