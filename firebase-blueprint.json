@@ -125,6 +125,22 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["requesterId", "receiverId", "status"]
+    },
+    "Event": {
+      "title": "Campus Event",
+      "description": "A scheduled school event or activity.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string" },
+        "location": { "type": "string" },
+        "organizerId": { "type": "string" },
+        "organizerName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "date", "time", "location", "organizerId"]
     }
   },
   "firestore": {
@@ -136,6 +152,7 @@
     "/presence/{userId}": { "schema": "Presence", "description": "Online presence tracking." },
     "/quizzes/{quizId}": { "schema": "Quiz", "description": "Class quizzes." },
     "/quizResults/{resultId}": { "schema": "QuizResult", "description": "Student quiz results." },
-    "/friendships/{friendshipId}": { "schema": "Friendship", "description": "User friendship statuses." }
+    "/friendships/{friendshipId}": { "schema": "Friendship", "description": "User friendship statuses." },
+    "/events/{eventId}": { "schema": "Event", "description": "Campus-wide events." }
   }
 }

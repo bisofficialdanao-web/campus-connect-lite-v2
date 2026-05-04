@@ -15,6 +15,8 @@ import {
   Calendar,
   ClipboardList,
   MessageCircle,
+  Clock,
+  MapPin,
   Ghost,
   Trash2,
   Edit3,
@@ -58,6 +60,7 @@ export default function Campus() {
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,10 +161,26 @@ export default function Campus() {
   };
 
   const quickActions = [
-    { icon: <School size={16} />, label: 'Create Class', color: 'bg-purple-50 text-purple-600 border-purple-100' },
-    { icon: <Calendar size={16} />, label: 'Add Event', color: 'bg-orange-50 text-orange-600 border-orange-100' },
-    { icon: <ClipboardList size={16} />, label: 'Post Task', color: 'bg-green-50 text-green-600 border-green-100' },
-  ];
+    { 
+      icon: <School size={16} />, 
+      label: 'Create Class', 
+      color: 'bg-purple-50 text-purple-600 border-purple-100',
+      onClick: () => {} 
+    },
+    { 
+      icon: <Calendar size={16} />, 
+      label: 'Add Event', 
+      color: 'bg-orange-50 text-orange-600 border-orange-100',
+      onClick: () => setIsEventModalOpen(true),
+      visible: profile?.role === 'teacher'
+    },
+    { 
+      icon: <ClipboardList size={16} />, 
+      label: 'Post Task', 
+      color: 'bg-green-50 text-green-600 border-green-100',
+      onClick: () => {} 
+    },
+  ].filter(a => a.visible !== false);
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 pb-20">
@@ -171,7 +190,11 @@ export default function Campus() {
         <div className="lg:hidden -mx-4 px-4 overflow-x-auto no-scrollbar pb-2">
           <div className="flex gap-2 min-w-max">
             {quickActions.map((action, i) => (
-              <button key={i} className={cn("px-4 py-2 rounded-xl flex items-center gap-2 border font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all", action.color)}>
+              <button 
+                key={i} 
+                onClick={action.onClick}
+                className={cn("px-4 py-2 rounded-xl flex items-center gap-2 border font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all", action.color)}
+              >
                 {action.icon}
                 {action.label}
               </button>
@@ -305,7 +328,11 @@ export default function Campus() {
           <h4 className="text-[10px] font-black uppercase text-brand-secondary tracking-widest mb-4">Quick Actions</h4>
           <div className="space-y-2">
             {quickActions.map((action, i) => (
-              <button key={i} className={cn("w-full px-4 py-3 rounded-xl flex items-center gap-3 border font-black text-[10px] uppercase tracking-widest hover:scale-[0.98] transition-all", action.color)}>
+              <button 
+                key={i} 
+                onClick={action.onClick}
+                className={cn("w-full px-4 py-3 rounded-xl flex items-center gap-3 border font-black text-[10px] uppercase tracking-widest hover:scale-[0.98] transition-all", action.color)}
+              >
                 {action.icon}
                 {action.label}
               </button>
@@ -350,6 +377,9 @@ export default function Campus() {
             </motion.div>
           </div>
         )}
+        {isEventModalOpen && (
+          <EventModal onClose={() => setIsEventModalOpen(false)} />
+        )}
       </AnimatePresence>
     </div>
   );
@@ -359,8 +389,15 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
   const { user, profile } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setEditContent(post.content);
+    }
+  }, [post.content, isEditing]);
 
   const TRUNCATE_LIMIT = 280;
   const shouldTruncate = post.content.length > TRUNCATE_LIMIT;
@@ -390,13 +427,20 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
   };
 
   const handleEdit = async () => {
-    if (!editContent.trim()) return;
-    const postRef = doc(db, 'posts', post.id);
-    await updateDoc(postRef, {
-      content: editContent,
-      updatedAt: serverTimestamp()
-    });
-    setIsEditing(false);
+    if (!editContent.trim() || isSaving) return;
+    setIsSaving(true);
+    try {
+      const postRef = doc(db, 'posts', post.id);
+      await updateDoc(postRef, {
+        content: editContent,
+        updatedAt: serverTimestamp()
+      });
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating post:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -471,12 +515,26 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
           <div className="space-y-3 mb-4">
             <textarea 
               value={editContent}
+              disabled={isSaving}
               onChange={(e) => setEditContent(e.target.value)}
-              className="w-full bg-brand-bg border border-brand-border rounded-xl p-3 text-sm font-medium focus:outline-none min-h-[80px]"
+              className="w-full bg-brand-bg border border-brand-border rounded-xl p-3 text-sm font-medium focus:outline-none focus:border-brand-primary min-h-[100px] transition-colors disabled:opacity-50"
+              placeholder="Edit your post..."
             />
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setIsEditing(false)} className="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-brand-secondary">Cancel</button>
-              <button onClick={handleEdit} className="px-3 py-1.5 bg-brand-ink text-white rounded-lg text-[9px] font-black uppercase tracking-widest shadow-sm">Save</button>
+            <div className="flex justify-end gap-2 px-1">
+              <button 
+                onClick={() => setIsEditing(false)} 
+                disabled={isSaving}
+                className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-brand-secondary hover:text-brand-ink transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleEdit} 
+                disabled={isSaving || !editContent.trim()}
+                className="px-4 py-1.5 bg-brand-ink text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm hover:scale-95 transition-all disabled:opacity-50 disabled:scale-100 min-w-[70px] flex items-center justify-center"
+              >
+                {isSaving ? <Loader2 size={12} className="animate-spin" /> : 'Save'}
+              </button>
             </div>
           </div>
         ) : (
@@ -739,6 +797,150 @@ function CommentItem({ comment, onDelete, onUpdate }: { comment: CommentType, on
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function EventModal({ onClose }: { onClose: () => void }) {
+  const { user, profile } = useAuth();
+  const [title, setTitle] = useState('');
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
+  const [location, setLocation] = useState('');
+  const [description, setDescription] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title || !date || !time || !location || !user || isSaving) return;
+
+    setIsSaving(true);
+    try {
+      await addDoc(collection(db, 'events'), {
+        title,
+        date,
+        time,
+        location,
+        description,
+        organizerId: user.uid,
+        organizerName: profile?.displayName || 'Teacher',
+        createdAt: serverTimestamp()
+      });
+      onClose();
+    } catch (error) {
+      console.error("Error creating event:", error);
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-brand-ink/40 backdrop-blur-sm">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="w-full max-w-md bg-brand-surface rounded-2xl border border-brand-border shadow-huge overflow-hidden"
+      >
+        <div className="p-4 border-b border-brand-border/50 flex items-center justify-between bg-brand-bg/50">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600">
+              <Calendar size={18} />
+            </div>
+            <div>
+              <h3 className="font-black text-brand-ink text-sm uppercase tracking-tight">Schedule Event</h3>
+              <p className="text-[10px] font-bold text-brand-secondary uppercase">Campus-wide announcement</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-brand-bg rounded-full transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-brand-secondary uppercase tracking-widest ml-1">Event Title</label>
+            <input 
+              required
+              type="text" 
+              placeholder="e.g. Science Fair 2024"
+              className="w-full bg-brand-bg border border-brand-border/50 rounded-xl px-4 py-3 text-sm font-medium focus:border-brand-primary outline-none transition-colors"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-brand-secondary uppercase tracking-widest ml-1">Date</label>
+              <div className="relative">
+                <input 
+                  required
+                  type="date" 
+                  className="w-full bg-brand-bg border border-brand-border/50 rounded-xl px-10 py-3 text-sm font-medium focus:border-brand-primary outline-none transition-colors appearance-none"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+                <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-secondary opacity-50" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-brand-secondary uppercase tracking-widest ml-1">Time</label>
+              <div className="relative">
+                <input 
+                  required
+                  type="time" 
+                  className="w-full bg-brand-bg border border-brand-border/50 rounded-xl px-10 py-3 text-sm font-medium focus:border-brand-primary outline-none transition-colors appearance-none"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                />
+                <Clock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-secondary opacity-50" />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-brand-secondary uppercase tracking-widest ml-1">Location</label>
+            <div className="relative">
+              <input 
+                required
+                type="text" 
+                placeholder="e.g. Main Auditorium"
+                className="w-full bg-brand-bg border border-brand-border/50 rounded-xl px-10 py-3 text-sm font-medium focus:border-brand-primary outline-none transition-colors"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
+              <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-secondary opacity-50" />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-brand-secondary uppercase tracking-widest ml-1">Description</label>
+            <textarea 
+              placeholder="What's happening?"
+              className="w-full bg-brand-bg border border-brand-border/50 rounded-xl px-4 py-3 text-sm font-medium focus:border-brand-primary outline-none transition-colors min-h-[100px] resize-none"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+
+          <div className="pt-2 flex gap-3">
+            <button 
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-3 rounded-xl border border-brand-border text-[10px] font-black uppercase tracking-widest hover:bg-brand-bg transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit"
+              disabled={isSaving}
+              className="flex-[2] bg-brand-primary text-white px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[0.98] active:scale-95 transition-all shadow-md flex items-center justify-center gap-2"
+            >
+              {isSaving ? <Loader2 size={16} className="animate-spin" /> : 'Schedule Event'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
     </div>
   );
 }
