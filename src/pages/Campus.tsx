@@ -46,6 +46,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
+import { regulateImage } from '../lib/imageRegulator';
 import UserProfileModal from '../components/UserProfileModal';
 import { Post, Comment as CommentType } from '../types';
 import { createNotification } from '../lib/notifications';
@@ -121,43 +122,7 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
       setIsCompressing(true);
       
       try {
-        // Native Canvas Compression logic
-        const compressedBlob = await new Promise<Blob>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = (event) => {
-            const img = new Image();
-            img.src = event.target?.result as string;
-            img.onload = () => {
-              const canvas = document.createElement('canvas');
-              let width = img.width;
-              let height = img.height;
-              const maxWidth = 650;
-              
-              if (width > maxWidth) {
-                height = (height * maxWidth) / width;
-                width = maxWidth;
-              }
-              
-              canvas.width = width;
-              canvas.height = height;
-              const ctx = canvas.getContext('2d');
-              ctx?.drawImage(img, 0, 0, width, height);
-              
-              canvas.toBlob(
-                (blob) => {
-                  if (blob) resolve(blob);
-                  else reject(new Error('Canvas to Blob failed'));
-                },
-                'image/webp',
-                0.4
-              );
-            };
-          };
-          reader.onerror = (error) => reject(error);
-        });
-
-        console.log(`Compression finished at ${Math.round(compressedBlob.size / 1024)}KB`);
+        const compressedBlob = await regulateImage(file);
         
         setIsCompressing(false);
         setIsUploading(true);
@@ -332,7 +297,7 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
                     {isCompressing ? (
                       <div className="flex flex-col items-center gap-2">
                         <Loader2 size={24} className="text-white animate-spin" />
-                        <span className="text-[10px] font-black text-white uppercase tracking-widest animate-pulse">Compressing...</span>
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest animate-pulse">Optimizing Image...</span>
                       </div>
                     ) : (
                       <>

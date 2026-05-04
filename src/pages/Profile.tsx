@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { User, ShieldCheck, Mail, LogOut, Edit3, Camera, Save, X, GraduationCap, BookOpen, AlertCircle, Upload, Loader2 } from 'lucide-react';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { regulateImage } from '../lib/imageRegulator';
 import { db, storage } from '../lib/firebase';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
@@ -41,42 +42,7 @@ export default function Profile() {
 
     setIsCompressing(true);
     try {
-      // Native Canvas Compression logic
-      const compressedBlob = await new Promise<Blob>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (event) => {
-          const img = new Image();
-          img.src = event.target?.result as string;
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
-            const maxWidth = 640;
-            
-            if (width > maxWidth) {
-              height = (height * maxWidth) / width;
-              width = maxWidth;
-            }
-            
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx?.drawImage(img, 0, 0, width, height);
-            
-            canvas.toBlob(
-              (blob) => {
-                if (blob) resolve(blob);
-                else reject(new Error('Canvas to Blob failed'));
-              },
-              'image/webp',
-              0.4
-            );
-          };
-        };
-        reader.onerror = (error) => reject(error);
-      });
-
+      const compressedBlob = await regulateImage(file);
       setIsCompressing(false);
       setIsUploading(true);
 
@@ -209,7 +175,7 @@ export default function Profile() {
                 {isCompressing ? (
                   <div className="flex flex-col items-center gap-2">
                     <Loader2 className="animate-spin text-brand-primary" size={24} />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary animate-pulse">Compressing...</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary animate-pulse">Optimizing Image...</span>
                   </div>
                 ) : isUploading ? (
                   <div className="flex flex-col items-center gap-2">
