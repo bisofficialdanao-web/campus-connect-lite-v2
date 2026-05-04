@@ -176,7 +176,7 @@ export default function Campus() {
     return () => unsubscribe();
   }, [auth]);
 
-  const handlePost = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!newPost.trim() && !uploadedImageUrl) || !user || isPosting || isUploading) return;
 
@@ -187,8 +187,8 @@ export default function Campus() {
         content: newPost,
         imageUrl: uploadedImageUrl,
         authorId: user.uid,
-        authorName: profile?.displayName || 'Anonymous',
-        authorPhoto: profile?.photoURL || null,
+        authorName: isAnonymous ? 'Anonymous Member' : (profile?.displayName || 'User'),
+        authorPhoto: isAnonymous ? null : (profile?.photoURL || null),
         isAnonymous,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -257,20 +257,22 @@ export default function Campus() {
         </div>
 
         {/* Create Post */}
-        <div className="bg-brand-surface border border-brand-card-border rounded-xl p-5 shadow-soft">
-          <form onSubmit={handlePost} className="space-y-4">
-            <div className="flex gap-4">
-              <div className="w-10 h-10 rounded-full bg-brand-bg border border-brand-border/30 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+        <div className="bg-brand-surface border border-brand-card-border rounded-xl p-4 sm:p-5 shadow-soft">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="hidden sm:flex w-10 h-10 rounded-full bg-brand-bg border border-brand-border/30 items-center justify-center overflow-hidden shrink-0 shadow-sm">
                 {isAnonymous ? <Ghost size={20} className="text-brand-ink" /> : (
                   profile?.photoURL ? <img src={profile.photoURL} className="w-full h-full object-cover" /> : <div className="text-sm font-black text-brand-primary uppercase">{profile?.displayName?.[0]}</div>
                 )}
               </div>
-              <textarea 
-                placeholder="Share a thought or confession..."
-                className="w-full bg-[#f5f5f5] border-none rounded-2xl p-4 text-brand-ink font-medium text-sm min-h-[80px] focus:ring-1 focus:ring-brand-primary placeholder:text-brand-secondary/50"
-                value={newPost}
-                onChange={(e) => setNewPost(e.target.value)}
-              />
+              <div className="flex-1">
+                <textarea 
+                  placeholder="Share a thought or confession..."
+                  className="w-full bg-[#f5f5f5] border-none rounded-2xl p-4 text-brand-ink font-medium text-sm min-h-[100px] focus:ring-1 focus:ring-brand-primary placeholder:text-brand-secondary/50 resize-none"
+                  value={newPost}
+                  onChange={(e) => setNewPost(e.target.value)}
+                />
+              </div>
             </div>
 
             {imagePreview && (

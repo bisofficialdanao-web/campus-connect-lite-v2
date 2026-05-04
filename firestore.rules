@@ -77,12 +77,21 @@ service cloud.firestore {
     }
 
     function isValidPost(data) {
-      return data.keys().hasAll(['content', 'authorId', 'authorName', 'authorPhoto', 'reactions', 'commentCount', 'createdAt', 'updatedAt'])
-        && data.keys().size() == 8
-        && data.content is string && data.content.size() <= 1000
+      return data.keys().hasAll(['content', 'authorId', 'authorName', 'reactions', 'commentCount', 'createdAt', 'updatedAt'])
+        && data.content is string && data.content.size() <= 5000
         && data.authorId == request.auth.uid
+        && data.authorName is string
+        && data.reactions is map
+        && data.commentCount is int
         && data.createdAt == request.time
-        && data.updatedAt == request.time;
+        && data.updatedAt == request.time
+        // Optional fields
+        && (!data.keys().contains('authorPhoto') || data.authorPhoto == null || data.authorPhoto is string)
+        && (!data.keys().contains('imageUrl') || data.imageUrl == null || data.imageUrl is string)
+        && (!data.keys().contains('isAnonymous') || data.isAnonymous is bool)
+        && (!data.keys().contains('isModule') || data.isModule is bool)
+        && (!data.keys().contains('fileUrl') || data.fileUrl == null || data.fileUrl is string)
+        && (!data.keys().contains('moduleName') || data.moduleName == null || data.moduleName is string);
     }
 
     function isValidClass(data) {
