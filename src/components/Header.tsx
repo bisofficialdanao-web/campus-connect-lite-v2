@@ -3,22 +3,40 @@ import { Search, Bell, LogOut, ChevronDown, User, MessageSquare, GraduationCap }
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
 import { cn } from '../lib/utils';
-import { collection, query, onSnapshot, limit } from 'firebase/firestore';
+import { collection, query, onSnapshot, limit, orderBy, where } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import UserProfileModal from './UserProfileModal';
+import { AppNotification } from '../types';
+import { markNotificationAsRead } from '../lib/notifications';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function Header() {
   const { user, profile, logout } = useAuth();
   const [showPresence, setShowPresence] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<{ id: string, name: string }[]>([]);
   const [selectedUserUid, setSelectedUserUid] = useState<string | null>(null);
   
-  // Mock notifications for demonstration
-  const notifications = [
-    { id: '1', text: 'New announcement in Math 101', time: '2m' },
-    { id: '2', text: 'Your assignment was graded', time: '1h' },
-  ];
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, 'notifications'), 
+      where('recipientId', '==', user.uid),
+      orderBy('createdAt', 'desc'),
+      limit(10)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as AppNotification[];
+      setNotifications(msgs);
+    });
+    return () => unsubscribe();
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -128,7 +146,11 @@ export default function Header() {
             )}
           >
             <Bell size={18} />
-            <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white" />
+            {unreadCount > 0 && (
+              <div className="absolute top-1 right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-brand-surface flex items-center justify-center">
+                <span className="text-[7px] font-black text-white">{unreadCount > 9 ? '9+' : unreadCount}</span>
+              </div>
+            )}
           </button>
 
           <AnimatePresence>
@@ -141,18 +163,44 @@ export default function Header() {
                   exit={{ opacity: 0, scale: 0.95, y: 10 }}
                   className="fixed sm:absolute right-4 top-14 sm:top-auto sm:right-0 sm:mt-2 w-[calc(100vw-32px)] sm:w-64 bg-brand-surface border border-brand-border shadow-huge rounded-2xl overflow-hidden py-2 z-[60]"
                 >
-                  <div className="px-3 py-1.5 text-[10px] font-black text-brand-secondary uppercase tracking-widest border-b border-brand-border/50 mb-1">
+                  <div className="px-3 py-1.5 text-[10px] font-black text-brand-secondary uppercase tracking-widest border-b border-brand-border/50 mb-1 flex justify-between items-center">
                     Notifications
+                    {unreadCount > 0 && <span className="text-brand-primary">{unreadCount} New</span>}
                   </div>
-                  {notifications.map(n => (
-                    <div key={n.id} className="px-3 py-2.5 hover:bg-brand-bg transition-colors cursor-pointer group border-b border-brand-border/30 last:border-0 text-left">
-                      <div className="text-sm font-medium leading-snug group-hover:text-brand-primary transition-colors">{n.text}</div>
-                      <div className="text-[10px] text-brand-secondary mt-0.5">{n.time} ago</div>
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-8 text-center">
+                      <div className="w-10 h-10 bg-brand-bg rounded-full flex items-center justify-center mx-auto mb-2 opacity-50">
+                        <Bell size={16} />
+                      </div>
+                      <p className="text-xs text-brand-secondary font-medium">No notifications yet</p>
+                    </div>
+                  ) : notifications.map(n => (
+                    <div 
+                      key={n.id} 
+                      onClick={() => !n.isRead && markNotificationAsRead(n.id)}
+                      className={cn(
+                        "px-3 py-2.5 hover:bg-brand-bg transition-colors cursor-pointer group border-b border-brand-border/30 last:border-0 text-left relative",
+                        !n.isRead && "bg-brand-primary/5"
+                      )}
+                    >
+                      {!n.isRead && <div className="absolute left-1 top-4 w-1.5 h-1.5 bg-brand-primary rounded-full" />}
+                      <div className={cn(
+                        "text-xs font-medium leading-snug group-hover:text-brand-primary transition-colors",
+                        n.isRead ? "text-brand-ink/70" : "text-brand-ink"
+                      )}>
+                        {n.text}
+                      </div>
+                      <div className="text-[9px] text-brand-secondary mt-0.5 flex items-center gap-1">
+                         <span className="w-1 h-1 bg-brand-border rounded-full" />
+                         {n.createdAt?.toDate ? formatDistanceToNow(n.createdAt.toDate(), { addSuffix: true }) : 'just now'}
+                      </div>
                     </div>
                   ))}
-                  <button className="w-full py-2 text-[10px] font-black text-brand-primary hover:bg-brand-bg uppercase tracking-widest">
-                    View All
-                  </button>
+                  {notifications.length > 0 && (
+                    <button className="w-full py-2 text-[10px] font-black text-brand-primary hover:bg-brand-bg uppercase tracking-widest">
+                      View All
+                    </button>
+                  )}
                 </motion.div>
               </>
             )}

@@ -7,6 +7,7 @@ import { Plus, Users, ShieldCheck, Clock, Check, X, BookOpen, GraduationCap, Che
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import QuizSection from '../components/QuizSection';
+import { createNotification } from '../lib/notifications';
 
 export default function Classes() {
   const { user, profile } = useAuth();
@@ -57,6 +58,18 @@ export default function Classes() {
     await updateDoc(classRef, {
       pendingStudentIds: arrayUnion(user.uid)
     });
+
+    const targetClass = classes.find(c => c.id === classId);
+    if (targetClass) {
+      await createNotification({
+        recipientId: targetClass.teacherId,
+        senderId: user.uid,
+        senderName: profile?.displayName || 'Student',
+        type: 'request',
+        text: `${profile?.displayName || 'A student'} wants to join your class: ${targetClass.name}`,
+        link: '/classes'
+      });
+    }
   };
 
   const myClasses = profile?.role === 'teacher' 
@@ -174,7 +187,7 @@ export default function Classes() {
 }
 
 function ClassItem({ c, isJoined, isPending, onJoin }: { c: Class, isJoined?: boolean, isPending?: boolean, onJoin?: () => void }) {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const [showStudents, setShowStudents] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -183,6 +196,15 @@ function ClassItem({ c, isJoined, isPending, onJoin }: { c: Class, isJoined?: bo
     await updateDoc(classRef, {
       studentIds: arrayUnion(studentId),
       pendingStudentIds: arrayRemove(studentId)
+    });
+
+    await createNotification({
+      recipientId: studentId,
+      senderId: user?.uid,
+      senderName: profile?.displayName || 'Teacher',
+      type: 'request',
+      text: `Your request to join ${c.name} has been approved!`,
+      link: '/classes'
     });
   };
 

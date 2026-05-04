@@ -7,6 +7,8 @@ import { Plus, Trash2, BookOpen, Brain, Send, X, CheckCircle2, ChevronRight, Bar
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+import { createNotification } from '../lib/notifications';
+import { getDoc } from 'firebase/firestore';
 
 interface QuizSectionProps {
   classId: string;
@@ -100,7 +102,7 @@ export default function QuizSection({ classId, isTeacher }: QuizSectionProps) {
                     )}
                   </div>
                   <p className="text-[10px] font-bold text-brand-secondary uppercase tracking-wider">
-                    {quiz.questions.length} Questions • {quiz.createdAt ? formatDistanceToNow(quiz.createdAt.toDate()) + ' ago' : 'Just now'}
+                    {quiz.questions.length} Questions • {quiz.createdAt ? formatDistanceToNow(quiz.createdAt.toDate(), { addSuffix: true }) : 'Just now'}
                   </p>
                 </div>
                 <ChevronRight size={16} className="ml-2 text-brand-border group-hover:text-brand-primary transition-colors shrink-0" />
@@ -162,7 +164,7 @@ export default function QuizSection({ classId, isTeacher }: QuizSectionProps) {
 }
 
 function QuizCreator({ classId, onClose }: { classId: string, onClose: () => void }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [title, setTitle] = useState('');
   const [questions, setQuestions] = useState<QuizQuestion[]>([
     { question: '', options: ['', '', '', ''], correctAnswer: 0 }
@@ -189,13 +191,31 @@ function QuizCreator({ classId, onClose }: { classId: string, onClose: () => voi
     if (!title.trim() || !user) return;
     setIsSaving(true);
     try {
-      await addDoc(collection(db, 'quizzes'), {
+      const quizDoc = await addDoc(collection(db, 'quizzes'), {
         classId,
         title,
         questions,
         teacherId: user.uid,
         createdAt: serverTimestamp()
       });
+
+      // Notify students
+      const classSnap = await getDoc(doc(db, 'classes', classId));
+      if (classSnap.exists()) {
+        const classData = classSnap.data();
+        const studentIds = classData.studentIds || [];
+        for (const sid of studentIds) {
+          await createNotification({
+            recipientId: sid,
+            senderId: user.uid,
+            senderName: profile?.displayName || 'Teacher',
+            type: 'quiz',
+            text: `New quiz available in ${classData.name}: ${title}`,
+            link: '/classes'
+          });
+        }
+      }
+
       onClose();
     } catch (error) {
       console.error("Quiz creation failed", error);
@@ -326,6 +346,16 @@ function QuizViewer({ quiz, onClose }: { quiz: Quiz, onClose: () => void }) {
           teacherId: quiz.teacherId,
           classId: quiz.classId,
           createdAt: serverTimestamp()
+        });
+
+        // Notify teacher
+        await createNotification({
+          recipientId: quiz.teacherId,
+          senderId: user.uid,
+          senderName: profile.displayName || 'A student',
+          type: 'quiz',
+          text: `${profile.displayName || 'A student'} completed the quiz "${quiz.title}" with a score of ${finalScore}/${quiz.questions.length}`,
+          link: '/classes'
         });
       } catch (error) {
         console.error("Failed to save quiz result:", error);
@@ -512,7 +542,7 @@ function ResultsModal({ quizId, onClose }: { quizId: string, onClose: () => void
                     <div>
                       <p className="text-sm font-black text-brand-ink">{res.studentName}</p>
                       <p className="text-[10px] font-bold text-brand-secondary uppercase tracking-widest">
-                        {res.createdAt ? formatDistanceToNow(res.createdAt.toDate()) + ' ago' : 'Recently'}
+                        {res.createdAt ? formatDistanceToNow(res.createdAt.toDate(), { addSuffix: true }) : 'Recently'}
                       </p>
                     </div>
                   </div>

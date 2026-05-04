@@ -7,6 +7,7 @@ import { Send, User, MessageSquare, Users, ChevronLeft, Search } from 'lucide-re
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
+import { createNotification } from '../lib/notifications';
 
 export default function Chats() {
   const { user, profile, activeDM, setActiveDM } = useAuth();
@@ -171,6 +172,18 @@ function ChatWindow({ chat, onBack }: { chat: { id: string, name: string, type: 
         receiverId: chat.type === 'dm' ? chat.id : null,
         createdAt: serverTimestamp()
       });
+
+      if (chat.type === 'dm' && chat.id !== 'guide-ai') {
+        await createNotification({
+          recipientId: chat.id,
+          senderId: user.uid,
+          senderName: profile?.displayName || 'Someone',
+          type: 'message',
+          text: `You have a new message from ${profile?.displayName || 'Someone'}: "${input.substring(0, 30)}..."`,
+          link: '/chats'
+        });
+      }
+
       setInput('');
     } catch (error) {
       console.error("Message send failed", error);

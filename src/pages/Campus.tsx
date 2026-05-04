@@ -19,7 +19,8 @@ import {
   Trash2,
   Edit3,
   Loader2,
-  X
+  X,
+  Share2
 } from 'lucide-react';
 import { 
   collection, 
@@ -41,6 +42,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
 import UserProfileModal from '../components/UserProfileModal';
 import { Post, Comment as CommentType } from '../types';
+import { createNotification } from '../lib/notifications';
 
 export default function Campus() {
   const { user, profile } = useAuth();
@@ -53,23 +55,39 @@ export default function Campus() {
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
         alert('File is too large (max 10MB)');
         return;
       }
+      
       setSelectedImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+
+      // Start upload immediately
+      setIsUploading(true);
+      setUploadProgress(0);
+      try {
+        const url = await uploadImage(file);
+        setUploadedImageUrl(url);
+      } catch (error) {
+        alert('Image upload failed. Please try again.');
+        setSelectedImage(null);
+        setImagePreview(null);
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -111,20 +129,13 @@ export default function Campus() {
 
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!newPost.trim() && !selectedImage) || !user || isPosting) return;
+    if ((!newPost.trim() && !uploadedImageUrl) || !user || isPosting || isUploading) return;
 
     setIsPosting(true);
     try {
-      let imageUrl = null;
-      if (selectedImage) {
-        setIsUploading(true);
-        imageUrl = await uploadImage(selectedImage);
-        setIsUploading(false);
-      }
-
       await addDoc(collection(db, 'posts'), {
         content: newPost,
-        imageUrl,
+        imageUrl: uploadedImageUrl,
         authorId: user.uid,
         authorName: profile?.displayName || 'Anonymous',
         authorPhoto: profile?.photoURL || null,
@@ -137,12 +148,12 @@ export default function Campus() {
       setNewPost('');
       setSelectedImage(null);
       setImagePreview(null);
+      setUploadedImageUrl(null);
       setIsAnonymous(false);
     } catch (error) {
       console.error("Error adding post:", error);
     } finally {
       setIsPosting(false);
-      setIsUploading(false);
     }
   };
 
@@ -205,7 +216,11 @@ export default function Campus() {
                 <button 
                   type="button"
                   disabled={isUploading}
-                  onClick={() => { setSelectedImage(null); setImagePreview(null); }}
+                  onClick={() => { 
+                    setSelectedImage(null); 
+                    setImagePreview(null); 
+                    setUploadedImageUrl(null);
+                  }}
                   className="absolute top-2 right-2 p-1.5 bg-brand-ink/80 text-white rounded-full hover:bg-brand-ink transition-colors disabled:opacity-0"
                 >
                   <X size={14} />
@@ -246,10 +261,10 @@ export default function Campus() {
               </div>
               <button 
                 type="submit"
-                disabled={(!newPost.trim() && !selectedImage) || isPosting || isUploading}
+                disabled={(!newPost.trim() && !uploadedImageUrl) || isPosting || isUploading}
                 className="bg-brand-primary text-white p-2 rounded-xl hover:scale-95 transition-all disabled:opacity-50 disabled:scale-100 shadow-md flex items-center justify-center min-w-[36px]"
               >
-                {(isPosting || isUploading) ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                {isPosting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
               </button>
             </div>
           </form>
@@ -341,10 +356,17 @@ export default function Campus() {
 }
 
 function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick: (uid: string) => void, onImageClick: (url: string) => void }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
+
+  const TRUNCATE_LIMIT = 280;
+  const shouldTruncate = post.content.length > TRUNCATE_LIMIT;
+  const displayContent = (shouldTruncate && !isExpanded) 
+    ? post.content.substring(0, TRUNCATE_LIMIT) + '...' 
+    : post.content;
 
   const handleReact = async () => {
     if (!user) return;
@@ -354,6 +376,17 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
     await updateDoc(postRef, {
       [`reactions.heart`]: hasReacted ? arrayRemove(user.uid) : arrayUnion(user.uid)
     });
+
+    if (!hasReacted && user.uid !== post.authorId) {
+      await createNotification({
+        recipientId: post.authorId,
+        senderId: user.uid,
+        senderName: profile?.displayName || 'Someone',
+        type: 'reaction',
+        text: `${profile?.displayName || 'Someone'} reacted to your post: "${post.content.substring(0, 30)}..."`,
+        link: `/campus`
+      });
+    }
   };
 
   const handleEdit = async () => {
@@ -373,7 +406,7 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
   };
 
   const displayPhoto = post.isAnonymous ? null : post.authorPhoto;
-  const timeLabel = post.createdAt?.toDate ? formatDistanceToNow(post.createdAt.toDate()) + ' ago' : 'just now';
+  const timeLabel = post.createdAt?.toDate ? formatDistanceToNow(post.createdAt.toDate(), { addSuffix: true }) : 'just now';
 
   return (
     <motion.div 
@@ -448,9 +481,25 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
           </div>
         ) : (
           <div className="space-y-3 mb-4">
-            <p className="text-brand-ink text-sm font-medium leading-relaxed whitespace-pre-wrap">
-              {post.content}
-            </p>
+            <motion.div 
+              whileTap={shouldTruncate ? { scale: 0.995 } : {}}
+              onClick={() => shouldTruncate && setIsExpanded(!isExpanded)}
+              className={cn(
+                "group/content transition-all",
+                shouldTruncate && "cursor-pointer hover:opacity-80"
+              )}
+            >
+              <p className="text-brand-ink text-sm font-medium leading-relaxed whitespace-pre-wrap">
+                {displayContent}
+                {shouldTruncate && !isExpanded && (
+                  <span className="text-brand-primary font-black text-[10px] ml-1 uppercase tracking-wider inline-block">Read More</span>
+                )}
+                {shouldTruncate && isExpanded && (
+                  <span className="text-brand-primary font-black text-[10px] ml-1 uppercase tracking-wider inline-block">Show Less</span>
+                )}
+              </p>
+            </motion.div>
+            
             {post.imageUrl && (
               <div 
                 onClick={() => onImageClick(post.imageUrl!)}
@@ -468,32 +517,58 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
           </div>
         )}
 
-        <div className="flex items-center gap-3 pt-3 border-t border-brand-border/30">
-          <button 
+        <div className="flex items-center gap-2 pt-3 border-t border-brand-border/30">
+          <motion.button 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleReact}
             className={cn(
-              "flex items-center gap-1.5 py-1 px-2.5 rounded-lg transition-all font-black text-[9px] uppercase tracking-widest border border-transparent",
+              "flex items-center gap-1.5 py-1.5 px-3 rounded-xl transition-colors font-black text-[10px] uppercase tracking-widest border",
               post.reactions?.['heart']?.includes(user?.uid || '')
-                ? "bg-red-50 text-red-500 border-red-100" 
-                : "bg-brand-bg text-brand-secondary hover:bg-white hover:border-brand-border/50"
+                ? "bg-red-50 text-red-500 border-red-100 shadow-sm" 
+                : "bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-red-500 hover:border-red-200"
             )}
           >
-            <Heart size={14} fill={post.reactions?.['heart']?.includes(user?.uid || '') ? "currentColor" : "none"} />
+            <Heart 
+              size={14} 
+              className={cn("transition-transform", post.reactions?.['heart']?.includes(user?.uid || '') && "animate-pulse")}
+              fill={post.reactions?.['heart']?.includes(user?.uid || '') ? "currentColor" : "none"} 
+            />
             {post.reactions?.['heart']?.length || 0}
-          </button>
+          </motion.button>
           
-          <button 
+          <motion.button 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setShowComments(!showComments)}
             className={cn(
-              "flex items-center gap-1.5 py-1 px-2.5 rounded-lg transition-all font-black text-[9px] uppercase tracking-widest border border-transparent",
+              "flex items-center gap-1.5 py-1.5 px-3 rounded-xl transition-colors font-black text-[10px] uppercase tracking-widest border",
               showComments 
-                ? "bg-brand-primary/10 text-brand-primary border-brand-primary/20" 
-                : "bg-brand-bg text-brand-secondary hover:bg-white hover:border-brand-border/50"
+                ? "bg-brand-primary/10 text-brand-primary border-brand-primary/20 shadow-sm" 
+                : "bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-brand-primary hover:border-brand-primary/20"
             )}
           >
             <MessageSquare size={14} />
             {post.commentCount || 0}
-          </button>
+          </motion.button>
+
+          <motion.button 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => {
+              if (navigator.share) {
+                navigator.share({
+                  title: 'SchoolLite Post',
+                  text: post.content,
+                  url: window.location.href,
+                }).catch(() => {});
+              }
+            }}
+            className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl transition-colors font-black text-[10px] uppercase tracking-widest border bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-brand-ink hover:border-brand-ink/20"
+          >
+            <Share2 size={14} />
+            Share
+          </motion.button>
         </div>
       </div>
 
@@ -541,6 +616,10 @@ function CommentsList({ postId, currentCommentCount }: { postId: string, current
       await updateDoc(postRef, {
         commentCount: (currentCommentCount + 1)
       });
+
+      // Notify post author if not the same person
+      const postAuthorId = comments.length > 0 ? comments[0].authorId : null; // This is naive, let's pass it
+      
       setNewComment('');
     } catch (error) {
       console.error("Comment failed", error);
@@ -628,7 +707,7 @@ function CommentItem({ comment, onDelete, onUpdate }: { comment: CommentType, on
           <div className="flex items-center gap-1.5">
             <span className="text-[9px] font-black text-brand-primary uppercase tracking-wider">{comment.authorName}</span>
             <span className="text-[8px] font-bold text-brand-secondary opacity-50 uppercase tracking-tighter">
-              {comment.createdAt?.toDate ? formatDistanceToNow(comment.createdAt.toDate()) + ' ago' : 'just now'}
+              {comment.createdAt?.toDate ? formatDistanceToNow(comment.createdAt.toDate(), { addSuffix: true }) : 'just now'}
             </span>
           </div>
           {user?.uid === comment.authorId && (

@@ -1,5 +1,17 @@
 export type UserRole = 'teacher' | 'student';
 
+export interface AppNotification {
+  id: string;
+  recipientId: string;
+  senderId?: string;
+  senderName?: string;
+  type: 'message' | 'announcement' | 'request' | 'quiz' | 'reaction' | 'comment';
+  text: string;
+  link?: string;
+  isRead: boolean;
+  createdAt: any;
+}
+
 export interface UserProfile {
   uid: string;
   email: string;
