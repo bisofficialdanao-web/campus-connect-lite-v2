@@ -215,24 +215,24 @@ export default function Campus() {
         </div>
 
         {/* Create Post */}
-        <div className="bg-brand-surface border border-brand-border/50 rounded-2xl p-3 shadow-sm">
-          <form onSubmit={handlePost} className="space-y-3">
-            <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-lg bg-brand-bg border border-brand-border/30 flex items-center justify-center overflow-hidden shrink-0">
-                {isAnonymous ? <Ghost size={16} className="text-brand-ink" /> : (
-                  profile?.photoURL ? <img src={profile.photoURL} className="w-full h-full object-cover" /> : <div className="text-xs font-bold text-brand-primary uppercase">{profile?.displayName?.[0]}</div>
+        <div className="bg-brand-surface border border-brand-card-border rounded-xl p-5 shadow-soft">
+          <form onSubmit={handlePost} className="space-y-4">
+            <div className="flex gap-4">
+              <div className="w-10 h-10 rounded-full bg-brand-bg border border-brand-border/30 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+                {isAnonymous ? <Ghost size={20} className="text-brand-ink" /> : (
+                  profile?.photoURL ? <img src={profile.photoURL} className="w-full h-full object-cover" /> : <div className="text-sm font-black text-brand-primary uppercase">{profile?.displayName?.[0]}</div>
                 )}
               </div>
               <textarea 
                 placeholder="Share a thought or confession..."
-                className="w-full bg-transparent resize-none focus:outline-none text-brand-ink font-medium text-sm min-h-[50px] py-1.5"
+                className="w-full bg-[#f5f5f5] border-none rounded-2xl p-4 text-brand-ink font-medium text-sm min-h-[80px] focus:ring-1 focus:ring-brand-primary placeholder:text-brand-secondary/50"
                 value={newPost}
                 onChange={(e) => setNewPost(e.target.value)}
               />
             </div>
 
             {imagePreview && (
-              <div className="relative w-full max-h-64 rounded-xl overflow-hidden border border-brand-border/30 bg-brand-bg group">
+              <div className="relative w-full max-h-64 rounded-2xl overflow-hidden border border-brand-border/30 bg-brand-bg group ml-14">
                 <img src={imagePreview} alt="Preview" className="w-full h-full object-contain" />
                 
                 {isUploading && (
@@ -263,27 +263,27 @@ export default function Campus() {
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-2 border-t border-brand-border/30">
-              <div className="flex items-center gap-1">
+            <div className="flex items-center justify-between pt-2 border-t border-[#f0f0f0] ml-14">
+              <div className="flex items-center gap-2">
                 <button 
                   type="button"
                   onClick={() => setIsAnonymous(!isAnonymous)}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all font-black text-[9px] uppercase tracking-widest border",
+                    "flex items-center gap-1.5 px-3 py-2 rounded-full transition-all font-black text-[10px] uppercase tracking-widest border",
                     isAnonymous ? "bg-brand-ink text-white border-brand-ink" : "bg-brand-bg text-brand-secondary border-brand-border/50 hover:bg-white"
                   )}
                 >
                   <Users size={12} />
                   {isAnonymous ? 'Anonymous' : 'Public'}
                 </button>
-                <div className="flex px-1">
-                  <button type="button" className="p-1.5 text-brand-secondary hover:text-brand-primary transition-colors"><Smile size={16} /></button>
+                <div className="flex items-center">
+                  <button type="button" className="p-2 text-brand-secondary hover:text-brand-primary transition-colors"><Smile size={18} /></button>
                   <button 
                     type="button" 
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-1.5 text-brand-secondary hover:text-brand-primary transition-colors"
+                    className="p-2 text-brand-secondary hover:text-brand-primary transition-colors"
                   >
-                    <ImageIcon size={16} />
+                    <ImageIcon size={18} />
                   </button>
                   <input 
                     type="file" 
@@ -294,13 +294,14 @@ export default function Campus() {
                   />
                 </div>
               </div>
-              <button 
+              <motion.button 
+                whileTap={{ scale: 0.98 }}
                 type="submit"
                 disabled={(!newPost.trim() && !uploadedImageUrl) || isPosting || isUploading}
-                className="bg-brand-primary text-white p-2 rounded-xl hover:scale-95 transition-all disabled:opacity-50 disabled:scale-100 shadow-md flex items-center justify-center min-w-[36px]"
+                className="bg-brand-primary text-white px-6 py-2 rounded-full font-black text-[11px] uppercase tracking-widest hover:brightness-110 active:brightness-95 transition-all disabled:opacity-50 disabled:scale-100 shadow-md flex items-center justify-center gap-2"
               >
-                {isPosting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-              </button>
+                {isPosting ? <Loader2 size={16} className="animate-spin" /> : <>Post <Send size={14} /></>}
+              </motion.button>
             </div>
           </form>
         </div>
@@ -590,46 +591,46 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "bg-brand-surface border border-brand-border/50 rounded-2xl overflow-hidden shadow-sm",
+        "bg-brand-surface border border-brand-card-border rounded-xl overflow-hidden shadow-soft p-5",
         post.isModule && "border-blue-200 border-2"
       )}
     >
       {post.isModule && (
-        <div className="bg-blue-50 px-3.5 py-1.5 flex items-center gap-2 border-b border-blue-100">
+        <div className="bg-blue-50 px-5 py-2 -mx-5 -mt-5 mb-4 flex items-center gap-2 border-b border-blue-100">
           <BookOpen size={14} className="text-blue-500" />
           <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest leading-none">Class Module</span>
         </div>
       )}
-      <div className="p-3.5">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2.5">
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
             <button 
               onClick={() => !post.isAnonymous && onUserClick(post.authorId)}
               className={cn(
-                "w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden border border-brand-border/30 shadow-inner transition-transform active:scale-95",
+                "w-10 h-10 rounded-full flex items-center justify-center overflow-hidden border border-brand-border/30 shadow-inner transition-transform active:scale-95",
                 post.isAnonymous ? "bg-brand-ink border-brand-ink cursor-default" : "bg-brand-bg border-brand-border"
               )}
             >
               {displayPhoto ? (
                 <img src={displayPhoto} alt="" className="w-full h-full object-cover" />
               ) : post.isAnonymous ? (
-                <Ghost size={16} className="text-white opacity-50" />
+                <Ghost size={20} className="text-white opacity-50" />
               ) : (
-                <span className="text-xs font-bold text-brand-primary uppercase">{post.authorName?.[0] || 'U'}</span>
+                <span className="text-sm font-black text-brand-primary uppercase">{post.authorName?.[0] || 'U'}</span>
               )}
             </button>
             <div className="text-left">
               <button 
                 onClick={() => !post.isAnonymous && onUserClick(post.authorId)}
                 className={cn(
-                  "text-xs font-black tracking-tight flex items-center gap-1.5 hover:underline decoration-brand-border",
+                  "text-sm font-black tracking-tight flex items-center gap-1.5 hover:underline decoration-brand-border",
                   post.isAnonymous ? "text-brand-ink/60 no-underline cursor-default" : "text-brand-ink"
                 )}
               >
                 {post.isAnonymous ? 'Anonymous Member' : post.authorName}
                 {post.isAnonymous && <span className="text-[8px] font-black text-brand-secondary bg-brand-bg px-1.5 py-0.5 rounded border border-brand-border/30">LITE</span>}
               </button>
-              <p className="text-[9px] font-medium text-brand-secondary uppercase tracking-widest">{timeLabel}</p>
+              <p className="text-[10px] font-bold text-brand-secondary/60 uppercase tracking-widest">{timeLabel}</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -688,7 +689,7 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
                 shouldTruncate && "cursor-pointer hover:opacity-80"
               )}
             >
-              <p className="text-brand-ink text-sm font-medium leading-relaxed whitespace-pre-wrap">
+              <p className="text-brand-ink text-[15px] font-medium leading-relaxed whitespace-pre-wrap">
                 {displayContent}
                 {shouldTruncate && !isExpanded && (
                   <span className="text-brand-primary font-black text-[10px] ml-1 uppercase tracking-wider inline-block">Read More</span>

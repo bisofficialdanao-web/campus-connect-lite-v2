@@ -11,6 +11,10 @@
   --color-brand-primary: #2563EB;
   --color-brand-secondary: #64748B;
   --color-brand-border: #E2E8F0;
+  --color-brand-card-border: #f0f0f0;
+
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-huge: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
 }
 
 body {
