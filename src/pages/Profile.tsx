@@ -3,7 +3,6 @@ import { useAuth } from '../context/AuthContext';
 import { User, ShieldCheck, Mail, LogOut, Edit3, Camera, Save, X, GraduationCap, BookOpen, AlertCircle, Upload, Loader2 } from 'lucide-react';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
-import imageCompression from 'browser-image-compression';
 import { db, storage } from '../lib/firebase';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
@@ -42,23 +41,49 @@ export default function Profile() {
 
     setIsCompressing(true);
     try {
-      // Compress image
-      const options = {
-        maxSizeMB: 0.08,
-        maxWidthOrHeight: 640,
-        useWebWorker: true,
-        initialQuality: 0.4,
-        fileType: 'image/webp' as any
-      };
-      
-      const compressedFile = await imageCompression(file, options);
+      // Native Canvas Compression logic
+      const compressedBlob = await new Promise<Blob>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target?.result as string;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            const maxWidth = 640;
+            
+            if (width > maxWidth) {
+              height = (height * maxWidth) / width;
+              width = maxWidth;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, 0, 0, width, height);
+            
+            canvas.toBlob(
+              (blob) => {
+                if (blob) resolve(blob);
+                else reject(new Error('Canvas to Blob failed'));
+              },
+              'image/webp',
+              0.4
+            );
+          };
+        };
+        reader.onerror = (error) => reject(error);
+      });
+
       setIsCompressing(false);
       setIsUploading(true);
 
       // Use a fixed path so it overwrites the old one (Cleanup)
       const storageRef = ref(storage, `profiles/${profile.uid}/avatar`);
       
-      const uploadTask = uploadBytesResumable(storageRef, compressedFile);
+      const uploadTask = uploadBytesResumable(storageRef, compressedBlob, { contentType: 'image/webp' });
 
       uploadTask.on('state_changed', 
         (snapshot) => {

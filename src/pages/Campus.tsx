@@ -46,7 +46,6 @@ import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
-import imageCompression from 'browser-image-compression';
 import UserProfileModal from '../components/UserProfileModal';
 import { Post, Comment as CommentType } from '../types';
 import { createNotification } from '../lib/notifications';
@@ -113,6 +112,7 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log('Photo selected');
       if (file.size > 5 * 1024 * 1024) {
         alert('File too large for the Free Tier. Please use a smaller file.');
         return;
@@ -121,28 +121,58 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
       setIsCompressing(true);
       
       try {
-        const options = {
-          maxSizeMB: 0.08, // Aim for under 80KB as requested
-          maxWidthOrHeight: 640,
-          useWebWorker: true,
-          initialQuality: 0.4,
-          fileType: 'image/webp' as any
-        };
+        // Native Canvas Compression logic
+        const compressedBlob = await new Promise<Blob>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              let width = img.width;
+              let height = img.height;
+              const maxWidth = 650;
+              
+              if (width > maxWidth) {
+                height = (height * maxWidth) / width;
+                width = maxWidth;
+              }
+              
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx?.drawImage(img, 0, 0, width, height);
+              
+              canvas.toBlob(
+                (blob) => {
+                  if (blob) resolve(blob);
+                  else reject(new Error('Canvas to Blob failed'));
+                },
+                'image/webp',
+                0.4
+              );
+            };
+          };
+          reader.onerror = (error) => reject(error);
+        });
+
+        console.log(`Compression finished at ${Math.round(compressedBlob.size / 1024)}KB`);
         
-        const compressedFile = await imageCompression(file, options);
         setIsCompressing(false);
         setIsUploading(true);
         setUploadProgress(0);
         
-        setSelectedImage(compressedFile);
+        // Show preview using the blob
         const reader = new FileReader();
         reader.onloadend = () => {
           setImagePreview(reader.result as string);
         };
-        reader.readAsDataURL(compressedFile);
+        reader.readAsDataURL(compressedBlob);
 
-        const url = await uploadImage(compressedFile);
+        const url = await uploadImage(compressedBlob, file.name.split('.')[0] + '.webp');
         setUploadedImageUrl(url);
+        console.log('Upload successful');
       } catch (error) {
         console.error("Compression or upload failed", error);
         alert('Image processing failed. Please try again.');
@@ -155,11 +185,11 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
     }
   };
 
-  const uploadImage = (file: File): Promise<string | null> => {
+  const uploadImage = (blob: Blob, fileName: string): Promise<string | null> => {
     return new Promise((resolve, reject) => {
       if (!user) return resolve(null);
-      const storageRef = ref(storage, `campus/${user.uid}/${Date.now()}_${file.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${fileName}`);
+      const uploadTask = uploadBytesResumable(storageRef, blob, { contentType: 'image/webp' });
 
       uploadTask.on('state_changed', 
         (snapshot) => {
