@@ -43,6 +43,9 @@ export interface Post {
   isAnonymous?: boolean;
   reactions: Record<string, string[]>; // reaction -> userIds
   commentCount: number;
+  isModule?: boolean;
+  moduleName?: string;
+  fileUrl?: string;
   createdAt: any;
   updatedAt: any;
 }

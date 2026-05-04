@@ -22,7 +22,10 @@ import {
   Edit3,
   Loader2,
   X,
-  Share2
+  Share2,
+  BookOpen,
+  Download,
+  FileText
 } from 'lucide-react';
 import { 
   collection, 
@@ -61,7 +64,9 @@ export default function Campus() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [isModuleModalOpen, setIsModuleModalOpen] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const moduleFileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -165,7 +170,7 @@ export default function Campus() {
       icon: <School size={16} />, 
       label: 'Create Class', 
       color: 'bg-purple-50 text-purple-600 border-purple-100',
-      onClick: () => {} 
+      onClick: () => { window.location.href = '/classes' } 
     },
     { 
       icon: <Calendar size={16} />, 
@@ -175,10 +180,17 @@ export default function Campus() {
       visible: profile?.role === 'teacher'
     },
     { 
+      icon: <BookOpen size={16} />, 
+      label: 'New Module', 
+      color: 'bg-blue-50 text-blue-600 border-blue-100',
+      onClick: () => setIsModuleModalOpen(true),
+      visible: profile?.role === 'teacher'
+    },
+    { 
       icon: <ClipboardList size={16} />, 
-      label: 'Post Task', 
+      label: 'Assignments', 
       color: 'bg-green-50 text-green-600 border-green-100',
-      onClick: () => {} 
+      onClick: () => { window.location.href = '/classes' } 
     },
   ].filter(a => a.visible !== false);
 
@@ -380,7 +392,127 @@ export default function Campus() {
         {isEventModalOpen && (
           <EventModal onClose={() => setIsEventModalOpen(false)} />
         )}
+        {isModuleModalOpen && (
+          <ModuleModal onClose={() => setIsModuleModalOpen(false)} />
+        )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function ModuleModal({ onClose }: { onClose: () => void }) {
+  const { user, profile } = useAuth();
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title || !user || isSaving) return;
+
+    setIsSaving(true);
+    try {
+      let fileUrl = '';
+      if (file) {
+        const storageRef = ref(storage, `modules/${user.uid}/${Date.now()}_${file.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+        
+        await new Promise((resolve, reject) => {
+          uploadTask.on('state_changed', 
+            (snap) => setProgress((snap.bytesTransferred / snap.totalBytes) * 100),
+            reject,
+            async () => {
+              fileUrl = await getDownloadURL(storageRef);
+              resolve(null);
+            }
+          );
+        });
+      }
+
+      await addDoc(collection(db, 'posts'), {
+        content: `📚 NEW MODULE: ${title}\n\n${description}`,
+        fileUrl,
+        isModule: true,
+        moduleName: title,
+        authorId: user.uid,
+        authorName: profile?.displayName || 'Teacher',
+        authorPhoto: profile?.photoURL || null,
+        isAnonymous: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        reactions: { heart: [] },
+        commentCount: 0
+      });
+      onClose();
+    } catch (error) {
+      console.error("Error creating module post:", error);
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-brand-ink/40 backdrop-blur-sm">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="w-full max-w-md bg-brand-surface rounded-2xl border border-brand-border shadow-huge overflow-hidden"
+      >
+        <div className="p-4 border-b border-brand-border/50 flex items-center justify-between bg-brand-bg/50">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+              <BookOpen size={18} />
+            </div>
+            <h3 className="font-black text-brand-ink text-sm uppercase tracking-tight">Upload Module</h3>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-brand-bg rounded-full transition-colors"><X size={20} /></button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div>
+            <label className="text-[10px] font-black text-brand-secondary uppercase tracking-widest block mb-1">Module Title</label>
+            <input 
+              required
+              type="text" 
+              className="w-full bg-brand-bg border border-brand-border rounded-xl px-4 py-2.5 text-sm focus:border-brand-primary outline-none"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Module 1: Introduction to..."
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-black text-brand-secondary uppercase tracking-widest block mb-1">Description</label>
+            <textarea 
+              className="w-full bg-brand-bg border border-brand-border rounded-xl px-4 py-2.5 text-sm focus:border-brand-primary outline-none h-24 resize-none"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Summary of the module..."
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-black text-brand-secondary uppercase tracking-widest block mb-1">File (PDF/Image)</label>
+            <input 
+              type="file"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="w-full text-xs text-brand-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-brand-bg file:text-brand-ink hover:file:bg-brand-border"
+            />
+          </div>
+
+          {isSaving && (
+            <div className="w-full h-1 bg-brand-bg rounded-full overflow-hidden">
+              <motion.div className="h-full bg-brand-primary" animate={{ width: `${progress}%` }} />
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose} className="flex-1 py-2.5 text-[10px] font-black uppercase border border-brand-border rounded-xl">Cancel</button>
+            <button type="submit" disabled={isSaving} className="flex-1 py-2.5 text-[10px] font-black uppercase bg-brand-primary text-white rounded-xl shadow-md">
+              {isSaving ? 'Uploading...' : 'Publish Module'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
     </div>
   );
 }
@@ -457,8 +589,17 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-brand-surface border border-brand-border/50 rounded-2xl overflow-hidden shadow-sm"
+      className={cn(
+        "bg-brand-surface border border-brand-border/50 rounded-2xl overflow-hidden shadow-sm",
+        post.isModule && "border-blue-200 border-2"
+      )}
     >
+      {post.isModule && (
+        <div className="bg-blue-50 px-3.5 py-1.5 flex items-center gap-2 border-b border-blue-100">
+          <BookOpen size={14} className="text-blue-500" />
+          <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest leading-none">Class Module</span>
+        </div>
+      )}
       <div className="p-3.5">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2.5">
@@ -571,6 +712,24 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
                 />
                 <div className="absolute inset-0 bg-brand-ink/0 group-hover/img:bg-brand-ink/5 transition-colors" />
               </div>
+            )}
+
+            {post.isModule && post.fileUrl && (
+              <a 
+                href={post.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 bg-brand-bg rounded-xl border border-brand-border/50 hover:border-blue-300 transition-colors group/module"
+              >
+                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-blue-500 shadow-sm border border-brand-border/30">
+                  <FileText size={20} />
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-xs font-black text-brand-ink truncate uppercase tracking-tight">{post.moduleName || 'Download File'}</p>
+                  <p className="text-[9px] font-bold text-brand-secondary uppercase opacity-60">Click to view or download</p>
+                </div>
+                <Download size={16} className="text-brand-secondary group-hover/module:text-blue-500 group-hover/module:translate-y-0.5 transition-all" />
+              </a>
             )}
           </div>
         )}

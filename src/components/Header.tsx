@@ -136,12 +136,10 @@ export default function Header() {
       <div className="flex items-center gap-2">
         <div className="relative">
           <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowNotifications(!showNotifications);
-            }}
+            id="notification-bell"
+            onClick={() => setShowNotifications(!showNotifications)}
             className={cn(
-              "relative p-1.5 rounded-lg text-brand-secondary hover:text-brand-primary transition-all active:scale-95",
+              "relative p-1.5 rounded-lg text-brand-secondary hover:text-brand-primary transition-all active:scale-95 z-[61]",
               showNotifications && "bg-brand-primary/10 text-brand-primary"
             )}
           >
@@ -156,7 +154,10 @@ export default function Header() {
           <AnimatePresence>
             {showNotifications && (
               <>
-                <div className="fixed inset-0 z-50 cursor-default" onClick={() => setShowNotifications(false)} />
+                <div 
+                  className="fixed inset-0 z-[59]" 
+                  onClick={() => setShowNotifications(false)} 
+                />
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.95, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
