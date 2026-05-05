@@ -39,7 +39,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   // Show a user-friendly alert with technical details for debugging
   const errorMessage = error instanceof Error ? error.message : String(error);
   if (errorMessage.includes('insufficient permissions')) {
-    alert("Permission Denied: You might not be an approved teacher or your role is not set correctly. Please contact an admin.");
+    alert(`Permission Denied: Access mismatch (Op: ${operationType} on ${path}). Ensure your profile is complete and approved.`);
   } else {
     alert(`Database Error: ${errorMessage} (${operationType} on ${path})`);
   }
