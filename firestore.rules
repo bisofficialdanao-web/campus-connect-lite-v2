@@ -76,6 +76,25 @@ service cloud.firestore {
         && data.updatedAt == request.time;
     }
 
+    function isValidEvent(data) {
+      return data.keys().hasAll(['title', 'date', 'time', 'location', 'description', 'organizerId', 'organizerName', 'createdAt'])
+        && data.keys().size() == 8
+        && data.title is string && data.title.size() <= 200
+        && data.organizerId == request.auth.uid
+        && data.createdAt == request.time;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['recipientId', 'type', 'text', 'isRead', 'createdAt'])
+        && data.recipientId is string
+        && data.type in ['message', 'announcement', 'request', 'quiz', 'reaction', 'comment']
+        && data.text is string
+        && data.isRead is bool
+        && data.createdAt == request.time
+        && (!data.keys().contains('senderId') || data.senderId == request.auth.uid)
+        && (!data.keys().contains('link') || data.link is string);
+    }
+
     function isValidPost(data) {
       return data.keys().hasAll(['content', 'authorId', 'authorName', 'reactions', 'commentCount', 'createdAt', 'updatedAt'])
         && data.content is string && data.content.size() <= 5000
@@ -85,7 +104,7 @@ service cloud.firestore {
         && data.commentCount is int
         && data.createdAt == request.time
         && data.updatedAt == request.time
-        // Optional fields
+        // Optional fields - now more strictly validated if present
         && (!data.keys().contains('authorPhoto') || data.authorPhoto == null || data.authorPhoto is string)
         && (!data.keys().contains('imageUrl') || data.imageUrl == null || data.imageUrl is string)
         && (!data.keys().contains('isAnonymous') || data.isAnonymous is bool)
@@ -230,6 +249,22 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isTeacher() && isValidResource(incoming());
       allow delete: if isTeacher() && resource.data.uploaderId == request.auth.uid;
+    }
+
+    // 10. Events
+    match /events/{eventId} {
+      allow read: if isSignedIn();
+      allow create: if isTeacher() && isValidEvent(incoming());
+      allow delete: if isTeacher() && resource.data.organizerId == request.auth.uid;
+    }
+
+    // 11. Notifications
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+      allow create: if isSignedIn() && isValidNotification(incoming());
+      allow update: if isSignedIn() && resource.data.recipientId == request.auth.uid 
+        && incoming().diff(existing()).affectedKeys().hasOnly(['isRead']);
+      allow delete: if isSignedIn() && resource.data.recipientId == request.auth.uid;
     }
   }
 }

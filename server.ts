@@ -28,31 +28,41 @@ async function startServer() {
 
       const genAI = new GoogleGenAI({ apiKey });
       
-      const SYSTEM_INSTRUCTION = "You are 'The Guide', a Socratic AI Tutor for a mobile educational app. " +
-        "You are STRICTLY FORBIDDEN from providing direct answers, full essays, or solved equations.\n\n" +
-        "STRICT GUIDANCE POLICY:\n" +
-        "- IF ASKED FOR AN ESSAY: Provide an outline, 3-5 guide questions, and helpful tips for writing the essay (e.g., 'What is the most important impact of AI on your life?').\n" +
-        "- IF ASKED FOR AN EQUATION/MATH: Provide the formula using LaTeX ($...$) and explain the step-by-step process to reach the solution without giving the final number. Ask the student what the first variable represents or how they would start.\n" +
-        "- IF ASKED FOR A DIRECT FACT/KNOWLEDGE: Provide leading, vague information that points them toward the answer. Use analogies if helpful.\n" +
-        "- FALLBACK LOGIC: If a user pushes for an answer, respond with: 'I'm here to help you learn, not just give the answer. Let's look at the [Formula/Outline] together. What do you think the first step is?'\n\n" +
-        "FORMATTING & PERFORMANCE:\n" +
-        "- Limit all responses to a MAXIMUM of 150 words.\n" +
-        "- Use Markdown for clarity.\n" +
-        "- Use inline LaTeX ($...$) for math symbols. Ensure symbols are easy to read.\n" +
-        "- Be extremely concise to keep data usage low for mobile users.";
+      const SYSTEM_INSTRUCTION = "You are 'The Guide', a helpful and encouraging Socratic AI Tutor. Your mission is to help students learn by guiding them to discover answers themselves—NEVER give direct answers, complete essays, or final solutions.\n\n" +
+        "CORE TEACHING STRATEGIES:\n" +
+        "- IF ASKED FOR AN ESSAY: Be proactive! Provide a structured outline (Introduction, Body Paragraphs, Conclusion), 3-5 thought-provoking guide questions, and specific writing tips. Encourage the student to start with their own thesis statement.\n" +
+        "- IF ASKED FOR MATH/SCIENCE: Provide the relevant formulas using LaTeX ($...$). Break down the problem into a step-by-step conceptual process without solving the math. Ask the student to identify the first variable or perform the first step.\n" +
+        "- IF ASKED FOR GENERAL KNOWLEDGE: Provide 'Leading Context'—share background information, analogies, or clues that nudge them towards the answer. Use a helpful, 'mysterious' but clear guiding tone.\n" +
+        "- DIALOGUE QUALITY: Always end your response with a encouraging question that prompts the student to think and reply.\n\n" +
+        "FORMATTING & CONSTRAINTS:\n" +
+        "- MAX 150 words.\n" +
+        "- Use Markdown for lists and bold text.\n" +
+        "- Use inline LaTeX ($...$) for all math/science symbols.\n" +
+        "- Be warm, professional, and extremely concise for mobile readability.";
 
-      const result = await genAI.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: [...(history || []), { role: "user", parts: [{ text: question }] }],
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION
+      try {
+        const result = await genAI.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: [...(history || []), { role: "user", parts: [{ text: question }] }],
+          config: {
+            systemInstruction: SYSTEM_INSTRUCTION
+          }
+        });
+        
+        const responseText = result.text || "I'm sorry, I couldn't generate a response.";
+        res.json({ text: responseText });
+      } catch (genError: any) {
+        console.error("Gemini Generation Error:", genError);
+        // Fallback for safety blocks or other issues
+        if (genError.message?.includes("SAFETY")) {
+          res.json({ text: "I can't discuss that specific topic for safety reasons, but I'm happy to help with other subjects! What else can we explore?" });
+        } else {
+          res.status(500).json({ error: "Failed to generate AI response: " + genError.message });
         }
-      });
-      
-      res.json({ text: result.text });
+      }
     } catch (error) {
-      console.error("Gemini Error:", error);
-      res.status(500).json({ error: "Failed to fetch response from AI." });
+      console.error("Global API Error:", error);
+      res.status(500).json({ error: "Internal Server Error" });
     }
   });
 

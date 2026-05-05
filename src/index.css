@@ -16,6 +16,8 @@
   --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.05);
   --shadow-huge: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
   --shadow-neon: 0 0 10px rgba(37, 99, 235, 0.3), 0 0 20px rgba(37, 99, 235, 0.1);
+
+  --animate-spin-slow: spin 4s linear infinite;
 }
 
 body {

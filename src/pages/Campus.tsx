@@ -49,13 +49,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
 import { regulateImage } from '../lib/imageRegulator';
 import UserProfileModal from '../components/UserProfileModal';
+import AITutor from '../components/AITutor';
 import { Post, Comment as CommentType } from '../types';
 import { createNotification } from '../lib/notifications';
-import { askGuide } from '../services/geminiService';
-import ReactMarkdown from 'react-markdown';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import 'katex/dist/katex.min.css';
 
 import { PageView } from '../components/BottomNav';
 
@@ -153,26 +149,29 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
     return () => unsubscribe();
   }, [auth]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!newPost.trim() && !uploadedImageUrl) || !user || isPosting || isUploading) return;
 
     setIsPosting(true);
     const path = 'posts';
+    
+    // Explicitly handle fields to ensure they match rules
     const postData = {
-      content: newPost,
-      imageUrl: uploadedImageUrl,
       authorId: user.uid,
-      authorName: isAnonymous ? 'Anonymous Member' : (profile?.displayName || 'User'),
-      authorPhoto: isAnonymous ? null : (profile?.photoURL || null),
-      isAnonymous,
+      authorName: isAnonymous ? 'Anonymous Member' : (profile?.displayName || user.displayName || 'Campus Member'),
+      content: newPost,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-      reactions: { heart: [] },
-      commentCount: 0
+      reactions: {}, // Strict empty object as requested
+      commentCount: 0,
+      // Optional fields retained for features
+      imageUrl: uploadedImageUrl || null,
+      authorPhoto: isAnonymous ? null : (profile?.photoURL || user.photoURL || null),
+      isAnonymous: !!isAnonymous
     };
 
-    console.log('Attempting to post:', postData);
+    console.log('Attempting to post with strict alignment:', postData);
 
     try {
       await addDoc(collection(db, path), postData);
@@ -182,15 +181,17 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
       setUploadedImageUrl(null);
       setIsAnonymous(false);
       console.log('Post successful');
-    } catch (error) {
-      console.error("Post failed", error);
-      alert('Post failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } catch (error: any) {
+      console.error("Post failed dramatically:", error);
+      const errorMessage = error?.message || 'Unknown error';
+      alert(`POSTING ERROR: ${errorMessage}\n\nPlease check if you have a stable connection and are logged in correctly.`);
       handleFirestoreError(error, OperationType.WRITE, path, auth);
     } finally {
       setIsPosting(false);
     }
   };
 
+  const userRole = profile?.role || 'student';
   const quickActions = [
     { 
       icon: <School size={16} />, 
@@ -203,14 +204,14 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
       label: 'Add Event', 
       color: 'bg-orange-50 text-orange-600 border-orange-100',
       onClick: () => setIsEventModalOpen(true),
-      visible: profile?.role === 'teacher'
+      visible: userRole === 'teacher'
     },
     { 
       icon: <BookOpen size={16} />, 
       label: 'New Module', 
       color: 'bg-blue-50 text-blue-600 border-blue-100',
       onClick: () => setIsModuleModalOpen(true),
-      visible: profile?.role === 'teacher'
+      visible: userRole === 'teacher'
     },
     { 
       icon: <ClipboardList size={16} />, 
@@ -242,7 +243,7 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
 
         {/* Create Post */}
         <div className="bg-brand-surface border border-brand-card-border rounded-xl p-4 sm:p-5 shadow-soft">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handlePost} className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="hidden sm:flex w-10 h-10 rounded-full bg-brand-bg border border-brand-border/30 items-center justify-center overflow-hidden shrink-0 shadow-sm">
                 {isAnonymous ? <Ghost size={20} className="text-brand-ink" /> : (
@@ -450,16 +451,23 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
 
       {/* Floating AI Tutor Button */}
       <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+        whileHover={{ scale: 1.1, rotate: 5 }}
+        whileTap={{ scale: 0.9 }}
         onClick={() => setIsAITutorOpen(true)}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-[#ff00ff] text-white rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,0,255,0.5)] z-50 hover:brightness-110 transition-all border-2 border-white/20"
+        className="fixed bottom-24 right-6 w-14 h-14 bg-[#ff00ff] text-white rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,0,255,0.6)] z-[60] hover:brightness-110 transition-all border-2 border-white/40 group"
+        title="Ask Socratic AI Tutor"
       >
-        <Sparkles size={28} />
+        <Sparkles size={28} className="group-hover:animate-spin-slow" />
+        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+        </span>
       </motion.button>
     </div>
   );
 }
+
+// Event Modal and Module Modal follow...
 
 function ModuleModal({ onClose }: { onClose: () => void }) {
   const { user, profile, auth } = useAuth();
@@ -485,27 +493,29 @@ function ModuleModal({ onClose }: { onClose: () => void }) {
       }
 
       const postData = {
+        authorId: user.uid,
+        authorName: profile?.displayName || user.displayName || 'Teacher',
         content: `📚 NEW MODULE: ${title}\n\n${description}`,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        reactions: {},
+        commentCount: 0,
+        // Module specific fields
         fileUrl,
         isModule: true,
         moduleName: title,
-        authorId: user.uid,
-        authorName: profile?.displayName || 'Teacher',
-        authorPhoto: profile?.photoURL || null,
-        isAnonymous: false,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        reactions: { heart: [] },
-        commentCount: 0
+        authorPhoto: profile?.photoURL || user.photoURL || null,
+        isAnonymous: false
       };
 
-      console.log('Attempting to publish module post:', postData);
+      console.log('Attempting to publish module post with alignment:', postData);
       await addDoc(collection(db, 'posts'), postData);
       console.log('Module post successful');
       onClose();
-    } catch (error) {
-      console.error("Module post failed", error);
-      alert('Module publish failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } catch (error: any) {
+      console.error("Module post failed dramatically:", error);
+      const errorMessage = error?.message || 'Unknown error';
+      alert(`MODULE UPLOAD ERROR: ${errorMessage}\n\nPlease verify your teacher permissions or connection.`);
       handleFirestoreError(error, OperationType.WRITE, 'posts', auth);
       setIsSaving(false);
     }
@@ -905,8 +915,8 @@ function CommentsList({ postId, currentCommentCount, onUserClick }: { postId: st
         postId,
         content: newComment,
         authorId: user.uid,
-        authorName: profile?.displayName || 'Anonymous',
-        authorPhoto: profile?.photoURL || null,
+        authorName: profile?.displayName || user.displayName || 'Anonymous',
+        authorPhoto: profile?.photoURL || user.photoURL || null,
         createdAt: serverTimestamp()
       });
       // Increment comment count on post
@@ -916,7 +926,10 @@ function CommentsList({ postId, currentCommentCount, onUserClick }: { postId: st
       });
 
       setNewComment('');
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Comment failed dramatically:", error);
+      const errorMessage = error?.message || 'Unknown error';
+      alert(`COMMENT ERROR: ${errorMessage}\n\nPlease check your connection.`);
       handleFirestoreError(error, OperationType.WRITE, path, auth);
     } finally {
       setIsCommenting(false);
@@ -1079,19 +1092,20 @@ function EventModal({ onClose }: { onClose: () => void }) {
       location,
       description,
       organizerId: user.uid,
-      organizerName: profile?.displayName || 'Teacher',
+      organizerName: profile?.displayName || user.displayName || 'Teacher',
       createdAt: serverTimestamp()
     };
 
-    console.log('Attempting to schedule event:', eventData);
+    console.log('Attempting to schedule event with logging:', eventData);
 
     try {
       await addDoc(collection(db, 'events'), eventData);
       console.log('Event schedule successful');
       onClose();
-    } catch (error) {
-      console.error("Event schedule failed", error);
-      alert('Event schedule failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } catch (error: any) {
+      console.error("Event schedule failed dramatically:", error);
+      const errorMessage = error?.message || 'Unknown error';
+      alert(`EVENT SCHEDULING ERROR: ${errorMessage}\n\nPlease check your permissions.`);
       handleFirestoreError(error, OperationType.WRITE, 'events', auth);
       setIsSaving(false);
     }
@@ -1209,115 +1223,3 @@ function EventModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function AITutor({ onClose }: { onClose: () => void }) {
-  const [messages, setMessages] = useState<{ role: 'user' | 'guide', text: string }[]>([
-    { role: 'guide', text: "Hello! I am your Socratic AI Tutor. I help you learn by guiding you through problems without giving direct answers. What would you like to explore today?" }
-  ]);
-  const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const scrollRef = React.useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, isTyping]);
-
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isTyping) return;
-
-    const userMessage = input;
-    setInput('');
-    setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
-    setIsTyping(true);
-
-    // Convert internal message format to Gemini API format
-    const history = messages
-      .filter(m => m.text !== "Hello! I am your Socratic AI Tutor. I help you learn by guiding you through problems without giving direct answers. What would you like to explore today?")
-      .map(m => ({
-        role: m.role === 'guide' ? 'model' as const : 'user' as const,
-        parts: [{ text: m.text }]
-      }));
-
-    const guideResponse = await askGuide(userMessage, history);
-    setMessages(prev => [...prev, { role: 'guide', text: guideResponse }]);
-    setIsTyping(false);
-  };
-
-  return (
-    <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-4 bg-brand-ink/40 backdrop-blur-sm">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 100 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 100 }}
-        className="w-full max-w-md bg-brand-surface rounded-t-3xl sm:rounded-3xl border border-brand-border shadow-huge overflow-hidden flex flex-col h-[80vh] sm:h-[600px]"
-      >
-        <div className="p-4 border-b border-brand-border/50 bg-[#ff00ff] flex items-center justify-between text-white shadow-lg">
-          <div className="flex items-center gap-2">
-            <Sparkles size={20} />
-            <span className="text-[12px] font-black uppercase tracking-widest">Socratic AI Tutor</span>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-full transition-colors">
-            <X size={20} />
-          </button>
-        </div>
-
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar bg-brand-bg/30">
-          {messages.map((m, i) => (
-            <div key={i} className={cn(
-              "flex flex-col max-w-[85%]",
-              m.role === 'user' ? "ml-auto items-end" : "mr-auto items-start"
-            )}>
-              <div className={cn(
-                "p-4 rounded-2xl text-[13px] font-medium leading-relaxed shadow-sm",
-                m.role === 'user' 
-                  ? "bg-brand-primary text-white rounded-tr-none" 
-                  : "bg-white text-brand-ink border border-brand-border/50 rounded-tl-none markdown-body prose prose-sm prose-p:my-0"
-              )}>
-                {m.role === 'guide' ? (
-                  <ReactMarkdown 
-                    remarkPlugins={[remarkMath]} 
-                    rehypePlugins={[rehypeKatex]}
-                  >
-                    {m.text}
-                  </ReactMarkdown>
-                ) : m.text}
-              </div>
-              <span className="text-[8px] font-black uppercase tracking-widest text-brand-secondary mt-1 px-1 opacity-50">
-                {m.role === 'user' ? 'You' : 'The Guide'}
-              </span>
-            </div>
-          ))}
-          {isTyping && (
-            <div className="flex items-center gap-2 text-brand-secondary px-2">
-              <div className="flex gap-1">
-                <div className="w-1.5 h-1.5 bg-[#ff00ff] rounded-full animate-bounce" />
-                <div className="w-1.5 h-1.5 bg-[#ff00ff] rounded-full animate-bounce delay-75" />
-                <div className="w-1.5 h-1.5 bg-[#ff00ff] rounded-full animate-bounce delay-150" />
-              </div>
-              <span className="text-[8px] font-black uppercase tracking-widest text-[#ff00ff]">Analyzing...</span>
-            </div>
-          )}
-        </div>
-
-        <form onSubmit={handleSend} className="p-4 border-t border-brand-border/50 bg-white flex gap-2">
-          <input 
-            type="text" 
-            placeholder="Ask your tutor anything..."
-            className="flex-1 bg-brand-bg border border-brand-border/50 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-[#ff00ff] transition-colors"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-          />
-          <button 
-            type="submit"
-            disabled={!input.trim() || isTyping}
-            className="bg-[#ff00ff] text-white p-3 rounded-xl hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 shadow-md"
-          >
-            <Send size={18} />
-          </button>
-        </form>
-      </motion.div>
-    </div>
-  );
-}
