@@ -105,23 +105,28 @@ export default function AITutor({ onClose }: AITutorProps) {
         className="w-full max-w-md bg-brand-surface rounded-t-3xl sm:rounded-3xl border border-brand-border shadow-huge overflow-hidden flex flex-col h-[85vh] sm:h-[600px] relative mt-16 sm:mt-0"
       >
         {/* Header */}
-        <div className="p-4 border-b border-brand-border/50 bg-[#ff00ff] flex items-center justify-between text-white shadow-lg shrink-0">
-          <div className="flex items-center gap-2">
-            <Sparkles size={20} className="animate-pulse" />
-            <span className="text-[12px] font-black uppercase tracking-widest">AI STUDY GUIDE</span>
+        <div className="p-5 border-b border-brand-border/30 bg-white flex items-center justify-between shadow-sm shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-brand-ink flex items-center justify-center text-white shadow-inner ring-4 ring-brand-bg">
+              <Sparkles size={20} className="animate-pulse text-brand-primary" />
+            </div>
+            <div>
+              <h3 className="text-[14px] font-black tracking-tight text-brand-ink uppercase leading-none">The Study Guide</h3>
+              <p className="text-[9px] font-bold text-brand-secondary/60 uppercase tracking-[0.2em] mt-1.5">Academic Mentor v2.0</p>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <button 
               onClick={clearChat}
-              className="p-2 hover:bg-white/20 rounded-full transition-colors active:scale-95"
-              title="Clear Session"
+              className="p-2.5 text-brand-secondary hover:text-red-500 hover:bg-red-50 rounded-xl transition-all active:scale-95 group"
+              title="Reset Session"
             >
-              <Trash2 size={18} />
+              <Trash2 size={18} className="group-hover:rotate-12 transition-transform" />
             </button>
             <button 
               onClick={onClose} 
-              className="p-2 hover:bg-white/20 rounded-full transition-colors active:scale-95"
-              aria-label="Close tutor"
+              className="p-2.5 text-brand-secondary hover:text-brand-ink hover:bg-brand-bg rounded-xl transition-all active:scale-95"
+              aria-label="Close"
             >
               <X size={20} />
             </button>
@@ -132,29 +137,47 @@ export default function AITutor({ onClose }: AITutorProps) {
         <div 
           ref={scrollRef} 
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar bg-brand-bg/30 relative"
+          className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-8 no-scrollbar bg-brand-bg relative"
         >
           {messages.map((m, i) => (
             <motion.div 
               key={i} 
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
               className={cn(
-                "flex flex-col max-w-[90%] sm:max-w-[85%] group",
+                "flex flex-col max-w-[92%] sm:max-w-[85%] group relative",
                 m.role === 'user' ? "ml-auto items-end" : "mr-auto items-start"
               )}
             >
               <div className={cn(
-                "p-4 rounded-2xl text-[13px] font-medium leading-relaxed shadow-sm relative",
+                "flex items-center gap-2 mb-2 px-1",
+                m.role === 'user' ? "flex-row-reverse" : "flex-row"
+              )}>
+                <span className={cn(
+                  "text-[9px] font-black uppercase tracking-[0.15em]",
+                  m.role === 'user' ? "text-brand-primary/80" : "text-brand-ink/60"
+                )}>
+                  {m.role === 'user' ? 'You' : 'The Guide'}
+                </span>
+                <div className={cn("w-1 h-1 rounded-full", m.role === 'user' ? "bg-brand-primary/30" : "bg-brand-ink/20")} />
+              </div>
+
+              <div className={cn(
+                "p-4 sm:p-5 rounded-2xl text-[14px] font-medium leading-relaxed transition-all duration-300 relative",
                 m.role === 'user' 
-                  ? "bg-brand-primary text-white rounded-tr-none" 
-                  : "bg-white text-brand-ink border border-brand-border/50 rounded-tl-none"
+                  ? "bg-brand-ink text-white rounded-tr-none shadow-lg shadow-brand-ink/5" 
+                  : "bg-white text-brand-ink border border-brand-border/40 rounded-tl-none shadow-sm hover:shadow-md"
               )}>
                 <div className={cn(
                   "prose prose-sm max-w-none break-words overflow-x-auto",
-                  "prose-pre:bg-brand-bg prose-pre:border prose-pre:border-brand-border/50",
-                  "prose-ol:list-decimal prose-ul:list-disc prose-li:my-1",
-                  m.role === 'user' ? "prose-invert" : "prose-headings:text-brand-ink prose-strong:text-brand-ink"
+                  "prose-headings:font-black prose-headings:tracking-tight",
+                  "prose-pre:bg-brand-bg prose-pre:border prose-pre:border-brand-border/30",
+                  "prose-ol:list-decimal prose-ul:list-disc prose-li:my-2",
+                  "prose-strong:font-black",
+                  m.role === 'user' 
+                    ? "prose-invert prose-p:text-white/90" 
+                    : "prose-headings:text-brand-ink prose-strong:text-brand-primary text-brand-ink/90"
                 )}>
                   <ReactMarkdown 
                     remarkPlugins={[remarkMath]} 
@@ -167,26 +190,38 @@ export default function AITutor({ onClose }: AITutorProps) {
                 {m.role === 'guide' && (
                   <button 
                     onClick={() => copyToClipboard(m.text, i)}
-                    className="absolute -right-8 top-0 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-brand-secondary hover:text-brand-primary"
+                    className="absolute -right-10 top-0 p-2 opacity-0 group-hover:opacity-100 transition-all text-brand-secondary hover:text-brand-primary hover:bg-brand-bg rounded-lg"
                     title="Copy to clipboard"
                   >
-                    {copiedId === i ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                    {copiedId === i ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
                   </button>
                 )}
               </div>
-              <span className="text-[8px] font-black uppercase tracking-widest text-brand-secondary mt-1 px-1 opacity-50">
-                {m.role === 'user' ? 'You' : 'The Guide'}
-              </span>
             </motion.div>
           ))}
           {isTyping && (
-            <div className="flex items-center gap-2 text-brand-secondary px-2 py-2">
-              <div className="flex gap-1">
-                <div className="w-1.5 h-1.5 bg-[#ff00ff] rounded-full animate-bounce" />
-                <div className="w-1.5 h-1.5 bg-[#ff00ff] rounded-full animate-bounce [animation-delay:0.2s]" />
-                <div className="w-1.5 h-1.5 bg-[#ff00ff] rounded-full animate-bounce [animation-delay:0.4s]" />
+            <div className="flex flex-col gap-3 mr-auto items-start max-w-[85%]">
+              <div className="flex items-center gap-2 px-1">
+                <span className="text-[9px] font-black uppercase tracking-[0.15em] text-brand-primary animate-pulse">The Guide</span>
+                <span className="text-[9px] font-bold text-brand-secondary/40 italic">Thinking...</span>
               </div>
-              <span className="text-[8px] font-black uppercase tracking-widest text-[#ff00ff] animate-pulse">Deep Thinking...</span>
+              <div className="bg-white border border-brand-border/40 p-5 rounded-2xl rounded-tl-none flex items-center justify-center gap-1.5 shadow-sm">
+                <motion.div 
+                  animate={{ scale: [1, 1.2, 1] }} 
+                  transition={{ repeat: Infinity, duration: 1 }}
+                  className="w-1.5 h-1.5 bg-brand-primary rounded-full" 
+                />
+                <motion.div 
+                  animate={{ scale: [1, 1.2, 1] }} 
+                  transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
+                  className="w-1.5 h-1.5 bg-brand-primary rounded-full" 
+                />
+                <motion.div 
+                  animate={{ scale: [1, 1.2, 1] }} 
+                  transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
+                  className="w-1.5 h-1.5 bg-brand-primary rounded-full" 
+                />
+              </div>
             </div>
           )}
 
@@ -196,31 +231,34 @@ export default function AITutor({ onClose }: AITutorProps) {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               onClick={scrollToBottom}
-              className="absolute bottom-4 right-4 bg-white/80 backdrop-blur-sm border border-brand-border/50 p-2 rounded-full shadow-lg text-brand-primary hover:text-[#ff00ff] transition-colors z-10"
+              className="absolute bottom-6 right-6 bg-brand-ink text-white p-3 rounded-full shadow-huge hover:bg-brand-primary transition-all z-10 active:scale-95"
             >
-              <Send size={16} className="rotate-90" />
+              <Send size={18} className="rotate-90 translate-x-px" />
             </motion.button>
           )}
         </div>
 
         {/* Input Area */}
-        <form onSubmit={handleSend} className="p-4 border-t border-brand-border/50 bg-white flex gap-2 shrink-0">
-          <input 
-            type="text" 
-            placeholder="Ask your study guide anything..."
-            className="flex-1 bg-brand-bg border border-brand-border/50 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-[#ff00ff] transition-colors shadow-inner"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            disabled={isTyping}
-          />
-          <button 
-            type="submit"
-            disabled={!input.trim() || isTyping}
-            className="bg-[#ff00ff] text-white p-3 rounded-xl hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 shadow-md disabled:grayscale"
-          >
-            <Send size={18} />
-          </button>
-        </form>
+        <div className="p-4 sm:p-6 border-t border-brand-border/30 bg-white shrink-0">
+          <form onSubmit={handleSend} className="relative flex items-center">
+            <input 
+              type="text" 
+              placeholder="Inquire about any academic subject..."
+              className="w-full bg-brand-bg border-none rounded-2xl pl-5 pr-14 py-4 text-[14px] font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20 transition-all shadow-inner placeholder:text-brand-secondary/40"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={isTyping}
+            />
+            <button 
+              type="submit"
+              disabled={!input.trim() || isTyping}
+              className="absolute right-2 bg-brand-ink text-white p-2.5 rounded-xl hover:bg-brand-primary transition-all disabled:opacity-30 active:scale-95 shadow-md flex items-center justify-center group"
+            >
+              <Send size={18} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </button>
+          </form>
+          <p className="text-[8px] font-bold text-center text-brand-secondary/40 uppercase tracking-[0.2em] mt-3">Structured Learning Path Support</p>
+        </div>
       </motion.div>
     </div>
   );
