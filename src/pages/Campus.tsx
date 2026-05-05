@@ -576,36 +576,40 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
             </div>
           </div>
           <div className="flex items-center gap-1 relative" ref={dropdownRef}>
-            <button 
-              onClick={() => setShowOptions(!showOptions)}
-              className="text-brand-secondary p-1.5 hover:bg-brand-bg rounded-lg transition-colors"
-            >
-              <MoreHorizontal size={16} />
-            </button>
-            
-            <AnimatePresence>
-              {showOptions && user?.uid === post.authorId && (
-                <motion.div
-                  initial={{ opacity: 0, y: 5, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 5, scale: 0.95 }}
-                  className="absolute right-0 top-full mt-1 w-32 bg-white border border-brand-border shadow-huge rounded-xl py-1 z-30"
+            {user?.uid === post.authorId && (
+              <>
+                <button 
+                  onClick={() => setShowOptions(!showOptions)}
+                  className="text-brand-secondary/40 p-1.5 hover:bg-brand-bg rounded-lg transition-colors"
                 >
-                  <button 
-                    onClick={() => { setIsEditing(true); setShowOptions(false); }}
-                    className="w-full px-3 py-2 text-left text-[11px] font-medium text-brand-ink hover:bg-brand-bg flex items-center gap-2"
-                  >
-                    <Edit3 size={12} /> Edit
-                  </button>
-                  <button 
-                    onClick={() => { handleDelete(); setShowOptions(false); }}
-                    className="w-full px-3 py-2 text-left text-[11px] font-medium text-red-500 hover:bg-red-50 flex items-center gap-2"
-                  >
-                    <Trash2 size={12} /> Delete
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  <MoreHorizontal size={16} />
+                </button>
+                
+                <AnimatePresence>
+                  {showOptions && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 5, scale: 0.95 }}
+                      className="absolute right-0 top-full mt-1 w-32 bg-white border border-brand-border/40 shadow-huge rounded-xl py-1 z-30"
+                    >
+                      <button 
+                        onClick={() => { setIsEditing(true); setShowOptions(false); }}
+                        className="w-full px-3 py-2 text-left text-[11px] font-medium text-brand-ink hover:bg-brand-bg flex items-center gap-2"
+                      >
+                        <Edit3 size={12} /> Edit
+                      </button>
+                      <button 
+                        onClick={() => { handleDelete(); setShowOptions(false); }}
+                        className="w-full px-3 py-2 text-left text-[11px] font-medium text-red-500 hover:bg-red-50 flex items-center gap-2"
+                      >
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </>
+            )}
           </div>
         </div>
 
@@ -675,10 +679,10 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
           <button 
             onClick={() => setShowReactionPicker(!showReactionPicker)}
             className={cn(
-              "flex items-center gap-1.5 h-[30px] px-3 py-1 rounded-lg transition-all font-semibold text-[11px] uppercase tracking-wide border",
+              "flex items-center gap-1.5 h-[32px] px-3 rounded-lg transition-all font-semibold text-[11px] uppercase tracking-wide border",
               Object.values(post.reactions || {}).some(uids => uids.includes(user?.uid || ''))
                 ? "bg-brand-primary/5 text-brand-primary border-brand-primary/20" 
-                : "bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-brand-primary hover:border-brand-primary/20"
+                : "bg-brand-bg text-brand-secondary/60 border-brand-border/30 hover:bg-white hover:text-brand-primary hover:border-brand-primary/20"
             )}
           >
             <Heart 
@@ -691,10 +695,10 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
           <button 
             onClick={() => setShowComments(!showComments)}
             className={cn(
-              "flex items-center gap-1.5 h-[30px] px-3 py-1 rounded-lg transition-all font-semibold text-[11px] uppercase tracking-wide border",
+              "flex items-center gap-1.5 h-[32px] px-3 rounded-lg transition-all font-semibold text-[11px] uppercase tracking-wide border",
               showComments 
                 ? "bg-brand-ink text-white border-brand-ink" 
-                : "bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-brand-ink hover:border-brand-ink/20"
+                : "bg-brand-bg text-brand-secondary/60 border-brand-border/30 hover:bg-white hover:text-brand-ink hover:border-brand-ink/20"
             )}
           >
             <MessageSquare size={16} />
@@ -707,7 +711,7 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
                 navigator.share({ title: 'Campus Post', text: post.content, url: window.location.href }).catch(() => {});
               }
             }}
-            className="flex items-center gap-1.5 h-[30px] px-3 py-1 rounded-lg transition-all font-semibold text-[11px] uppercase tracking-wide border bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-brand-ink hover:border-brand-ink/20"
+            className="flex items-center gap-1.5 h-[32px] px-3 rounded-lg transition-all font-semibold text-[11px] uppercase tracking-wide border bg-brand-bg text-brand-secondary/60 border-brand-border/30 hover:bg-white hover:text-brand-ink hover:border-brand-ink/20"
           >
             <Share2 size={16} />
             <span>Share</span>
@@ -919,11 +923,11 @@ function CommentItem({ comment, onDelete, onUpdate, onUserClick, onReact }: { co
           <div className="flex items-center gap-2">
             <button 
               onClick={() => onUserClick(comment.authorId)}
-              className="text-[10px] font-black text-brand-ink uppercase tracking-tight hover:text-brand-primary transition-colors"
+              className="text-[12px] font-semibold text-brand-ink whitespace-nowrap hover:text-brand-primary transition-colors"
             >
               {comment.authorName}
             </button>
-            <span className="text-[9px] font-bold text-brand-secondary/50 uppercase tracking-tighter">
+            <span className="text-[9px] font-medium text-slate-400">
               {comment.createdAt?.toDate ? formatDistanceToNow(comment.createdAt.toDate(), { addSuffix: true }) : 'just now'}
             </span>
           </div>
@@ -952,7 +956,7 @@ function CommentItem({ comment, onDelete, onUpdate, onUserClick, onReact }: { co
           </div>
         ) : (
           <div className="bg-brand-surface border border-brand-border/30 p-2 rounded-xl relative group">
-             <p className="text-xs font-medium text-brand-ink leading-snug">{comment.content}</p>
+             <p className="text-[11px] font-medium text-brand-ink leading-[1.5]">{comment.content}</p>
              
              {/* Comment Reactions */}
              <div className="flex flex-wrap gap-1 mt-1.5 min-h-[16px]">
