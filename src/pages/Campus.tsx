@@ -148,7 +148,7 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
   return (
     <div className="flex flex-col lg:flex-row gap-6 pb-20">
       {/* Main Feed */}
-      <div className="flex-1 space-y-4">
+      <div className="flex-1 space-y-[10px]">
         {/* Quick Actions (Mobile Top Scroll) */}
         <div className="lg:hidden -mx-4 px-4 overflow-x-auto no-scrollbar pb-2">
           <div className="flex gap-2 min-w-max">
@@ -166,47 +166,46 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
         </div>
 
         {/* Create Post */}
-        <div className="bg-brand-surface border border-brand-card-border rounded-xl p-4 shadow-soft">
-          <form onSubmit={handlePost} className="flex flex-col gap-3">
-            <div className="flex gap-3">
-              <div className="hidden sm:flex w-9 h-9 rounded-xl bg-brand-bg border border-brand-border/30 items-center justify-center overflow-hidden shrink-0">
-                {isAnonymous ? <Ghost size={18} className="text-brand-ink" /> : (
-                  profile?.photoURL ? <img src={profile.photoURL} className="w-full h-full object-cover" /> : <div className="text-xs font-black text-brand-primary uppercase">{profile?.displayName?.[0]}</div>
+        <div className="bg-brand-surface border border-brand-card-border rounded-xl p-2 shadow-soft">
+          <form onSubmit={handlePost} className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <div className="hidden sm:flex w-8 h-8 rounded-lg bg-brand-bg border border-brand-border/20 items-center justify-center overflow-hidden shrink-0">
+                {isAnonymous ? <Ghost size={16} className="text-brand-ink" /> : (
+                  profile?.photoURL ? <img src={profile.photoURL} alt="" className="w-full h-full object-cover" /> : <div className="text-[10px] font-black text-brand-primary uppercase">{profile?.displayName?.[0]}</div>
                 )}
               </div>
               <div className="flex-1">
                 <textarea 
                   placeholder="Share a thought..."
-                  className="w-full bg-[#f8f9fa] border border-brand-border/30 rounded-xl p-3 text-brand-ink font-medium text-sm min-h-[80px] focus:ring-1 focus:ring-brand-primary/20 focus:border-brand-primary/30 placeholder:text-brand-secondary/40 resize-none outline-none transition-all"
+                  className="w-full bg-[#f8f9fa] border border-brand-border/20 rounded-lg p-2 text-brand-ink font-medium text-[12px] min-h-[60px] focus:ring-1 focus:ring-brand-primary/20 focus:border-brand-primary/30 placeholder:text-brand-secondary/40 resize-none outline-none transition-all"
                   value={newPost}
                   onChange={(e) => setNewPost(e.target.value)}
                 />
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-brand-border/20">
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-brand-border/10">
               <div className="flex items-center gap-2">
                 <button 
                   type="button"
                   onClick={() => setIsAnonymous(!isAnonymous)}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 h-[30px] rounded-lg transition-all font-semibold text-[11px] uppercase tracking-wider border",
+                    "flex items-center gap-1 px-2 h-[24px] rounded-md transition-all font-semibold text-[9px] uppercase tracking-wider border",
                     isAnonymous ? "bg-brand-ink text-white border-brand-ink" : "bg-brand-bg text-brand-secondary border-brand-border/50 hover:bg-white"
                   )}
                 >
-                  <Users size={14} />
+                  <Users size={10} />
                   {isAnonymous ? 'Anonymous' : 'Public'}
                 </button>
-                <button type="button" className="p-1.5 text-brand-secondary hover:text-brand-primary transition-colors"><Smile size={18} /></button>
               </div>
               
               <motion.button 
-                whileTap={{ scale: 0.98 }}
+                whileTap={{ scale: 0.95 }}
                 type="submit"
                 disabled={!newPost.trim() || isPosting}
-                className="bg-brand-primary text-white px-6 h-[34px] rounded-lg font-semibold text-[12px] uppercase tracking-wider hover:brightness-105 transition-all disabled:opacity-50 flex items-center justify-center gap-2 w-full sm:w-auto"
+                className="bg-brand-primary text-white w-8 h-8 rounded-full font-semibold hover:brightness-105 transition-all disabled:opacity-50 flex items-center justify-center"
               >
-                {isPosting ? <Loader2 size={14} className="animate-spin" /> : <>Post <Send size={14} /></>}
+                {isPosting ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
               </motion.button>
             </div>
           </form>
@@ -432,11 +431,15 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
   const [editContent, setEditContent] = useState(post.content);
   const [showOptions, setShowOptions] = useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const pickerRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowOptions(false);
+      }
+      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
+        setShowReactionPicker(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -469,13 +472,14 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
     const path = `posts/${post.id}`;
     try {
       const postRef = doc(db, 'posts', post.id);
-      const hasReacted = post.reactions[reactionKey]?.includes(user.uid);
+      const reactions = post.reactions || {};
+      const hasReacted = reactions[reactionKey]?.includes(user.uid);
       
-      // If user had a different reaction, we might want to remove it first? 
-      // For simplicity, let's just toggle the specific one
       await updateDoc(postRef, {
         [`reactions.${reactionKey}`]: hasReacted ? arrayRemove(user.uid) : arrayUnion(user.uid)
       });
+
+      setShowReactionPicker(false);
 
       if (!hasReacted && user.uid !== post.authorId) {
         await createNotification({
@@ -676,7 +680,7 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
         )}
 
         <div className="flex items-center justify-start gap-[12px] pt-3 border-t border-brand-border/20">
-          <div className="relative">
+          <div className="relative" ref={pickerRef}>
             <button 
               onClick={() => setShowReactionPicker(!showReactionPicker)}
               className={cn(
