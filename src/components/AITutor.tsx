@@ -21,7 +21,7 @@ export default function AITutor({ onClose }: AITutorProps) {
   const [messages, setMessages] = useState<Message[]>([
     { 
       role: 'guide', 
-      text: "Hello! I am your Socratic AI Tutor. I help you learn by guiding you through problems without giving direct answers. What would you like to explore today?" 
+      text: "Hello! I am your AI Study Guide. I'm here to help you master your subjects with detailed steps, formulas, and structured paths. What would you like to build or learn today?" 
     }
   ]);
   const [input, setInput] = useState('');
@@ -46,7 +46,7 @@ export default function AITutor({ onClose }: AITutorProps) {
     try {
       // Convert internal message format to Gemini API format (history only, current message passed separately)
       const history = messages
-        .filter(m => !m.text.startsWith("Hello! I am your Socratic AI Tutor"))
+        .filter(m => !m.text.includes("I am your AI Study Guide"))
         .map(m => ({
           role: m.role === 'guide' ? 'model' as const : 'user' as const,
           parts: [{ text: m.text }]
@@ -74,7 +74,7 @@ export default function AITutor({ onClose }: AITutorProps) {
         <div className="p-4 border-b border-brand-border/50 bg-[#ff00ff] flex items-center justify-between text-white shadow-lg shrink-0">
           <div className="flex items-center gap-2">
             <Sparkles size={20} className="animate-pulse" />
-            <span className="text-[12px] font-black uppercase tracking-widest">Socratic AI Tutor</span>
+            <span className="text-[12px] font-black uppercase tracking-widest">AI STUDY GUIDE</span>
           </div>
           <button 
             onClick={onClose} 
@@ -98,16 +98,19 @@ export default function AITutor({ onClose }: AITutorProps) {
                   ? "bg-brand-primary text-white rounded-tr-none" 
                   : "bg-white text-brand-ink border border-brand-border/50 rounded-tl-none"
               )}>
-                <ReactMarkdown 
-                  remarkPlugins={[remarkMath]} 
-                  rehypePlugins={[rehypeKatex]}
-                  className={cn(
-                    "prose prose-sm prose-p:my-0 prose-headings:text-inherit prose-strong:text-inherit max-w-none break-words overflow-x-auto",
-                    m.role === 'user' ? "prose-invert" : "prose-headings:text-brand-ink prose-strong:text-brand-ink"
-                  )}
-                >
-                  {m.text}
-                </ReactMarkdown>
+                <div className={cn(
+                  "prose prose-sm max-w-none break-words overflow-x-auto",
+                  "prose-pre:bg-brand-bg prose-pre:border prose-pre:border-brand-border/50",
+                  "prose-ol:list-decimal prose-ul:list-disc prose-li:my-1",
+                  m.role === 'user' ? "prose-invert" : "prose-headings:text-brand-ink prose-strong:text-brand-ink"
+                )}>
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkMath]} 
+                    rehypePlugins={[rehypeKatex]}
+                  >
+                    {m.text}
+                  </ReactMarkdown>
+                </div>
               </div>
               <span className="text-[8px] font-black uppercase tracking-widest text-brand-secondary mt-1 px-1 opacity-50">
                 {m.role === 'user' ? 'You' : 'The Guide'}
@@ -130,7 +133,7 @@ export default function AITutor({ onClose }: AITutorProps) {
         <form onSubmit={handleSend} className="p-4 border-t border-brand-border/50 bg-white flex gap-2 shrink-0">
           <input 
             type="text" 
-            placeholder="Ask your tutor anything..."
+            placeholder="Ask your study guide anything..."
             className="flex-1 bg-brand-bg border border-brand-border/50 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-[#ff00ff] transition-colors shadow-inner"
             value={input}
             onChange={(e) => setInput(e.target.value)}
