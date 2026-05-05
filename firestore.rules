@@ -97,20 +97,30 @@ service cloud.firestore {
 
     function isValidPost(data) {
       return data.keys().hasAll(['content', 'authorId', 'authorName', 'reactions', 'commentCount', 'createdAt', 'updatedAt'])
-        && data.content is string && data.content.size() <= 5000
+        && data.content is string && data.content.size() <= 20000
         && data.authorId == request.auth.uid
         && data.authorName is string
         && data.reactions is map
         && data.commentCount is int
         && data.createdAt == request.time
         && data.updatedAt == request.time
-        // Optional fields - now more strictly validated if present
+        // Optional fields
         && (!data.keys().contains('authorPhoto') || data.authorPhoto == null || data.authorPhoto is string)
-        && (!data.keys().contains('imageUrl') || data.imageUrl == null || data.imageUrl is string)
         && (!data.keys().contains('isAnonymous') || data.isAnonymous is bool)
         && (!data.keys().contains('isModule') || data.isModule is bool)
         && (!data.keys().contains('fileUrl') || data.fileUrl == null || data.fileUrl is string)
         && (!data.keys().contains('moduleName') || data.moduleName == null || data.moduleName is string);
+    }
+
+    function isValidComment(data) {
+      return data.keys().hasAll(['postId', 'content', 'authorId', 'authorName', 'reactions', 'createdAt'])
+        && data.postId is string
+        && data.content is string && data.content.size() <= 5000
+        && data.authorId == request.auth.uid
+        && data.authorName is string
+        && data.reactions is map
+        && data.createdAt == request.time
+        && (!data.keys().contains('authorPhoto') || data.authorPhoto == null || data.authorPhoto is string);
     }
 
     function isValidClass(data) {
@@ -184,9 +194,13 @@ service cloud.firestore {
       
       match /comments/{commentId} {
         allow read: if isSignedIn();
-        allow create: if isSignedIn() 
-          && incoming().authorId == request.auth.uid
-          && incoming().createdAt == request.time;
+        allow create: if isSignedIn() && isValidComment(incoming());
+        allow update: if isSignedIn() && (
+          // Author edits
+          (isOwner(existing().authorId) && incoming().diff(existing()).affectedKeys().hasOnly(['content'])) ||
+          // Anyone reacts
+          (incoming().diff(existing()).affectedKeys().hasOnly(['reactions']))
+        );
         allow delete: if isSignedIn() && (isOwner(existing().authorId) || isOwner(get(/databases/$(database)/documents/posts/$(postId)).data.authorId));
       }
     }

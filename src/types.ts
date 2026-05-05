@@ -39,13 +39,12 @@ export interface Post {
   authorId: string;
   authorName: string;
   authorPhoto: string;
-  imageUrl?: string;
   isAnonymous?: boolean;
-  reactions: Record<string, string[]>; // reaction -> userIds
+  reactions: Record<string, string[]>; // e.g., "like" | "heart" | "blush" | "laugh" | "sad" | "angry"
   commentCount: number;
   isModule?: boolean;
   moduleName?: string;
-  fileUrl?: string;
+  fileUrl?: string; // Kept for teacher modules only
   createdAt: any;
   updatedAt: any;
 }
@@ -57,6 +56,7 @@ export interface Comment {
   authorId: string;
   authorName: string;
   authorPhoto?: string;
+  reactions: Record<string, string[]>;
   createdAt: any;
 }
 

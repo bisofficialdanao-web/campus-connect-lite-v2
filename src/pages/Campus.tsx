@@ -65,73 +65,9 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
   const [loading, setLoading] = useState(true);
   const [isPosting, setIsPosting] = useState(false);
   const [selectedUserUid, setSelectedUserUid] = useState<string | null>(null);
-  const [viewingImage, setViewingImage] = useState<string | null>(null);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isCompressing, setIsCompressing] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [isModuleModalOpen, setIsModuleModalOpen] = useState(false);
   const [isAITutorOpen, setIsAITutorOpen] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const moduleFileInputRef = React.useRef<HTMLInputElement>(null);
-
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      console.log('Photo selected');
-      if (file.size > 5 * 1024 * 1024) {
-        alert('File too large for the Free Tier. Please use a smaller file.');
-        return;
-      }
-      
-      setIsCompressing(true);
-      
-      try {
-        const compressedBlob = await regulateImage(file);
-        
-        setIsCompressing(false);
-        setIsUploading(true);
-        setUploadProgress(0);
-        
-        // Show preview using the blob
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImagePreview(reader.result as string);
-        };
-        reader.readAsDataURL(compressedBlob);
-
-        const url = await uploadImage(compressedBlob, file.name.split('.')[0] + '.webp');
-        setUploadedImageUrl(url);
-        console.log('Upload successful');
-      } catch (error) {
-        console.error("Compression or upload failed", error);
-        alert('Image processing failed. Please try again.');
-        setSelectedImage(null);
-        setImagePreview(null);
-        setIsCompressing(false);
-      } finally {
-        setIsUploading(false);
-      }
-    }
-  };
-
-  const uploadImage = async (blob: Blob, fileName: string): Promise<string | null> => {
-    if (!user) return null;
-    try {
-      const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${fileName}`);
-      setUploadProgress(10); // Start progress
-      const snapshot = await uploadBytes(storageRef, blob, { contentType: 'image/webp' });
-      setUploadProgress(100); // Complete progress
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      return downloadURL;
-    } catch (error) {
-      console.error("Upload failed", error);
-      throw error;
-    }
-  };
 
   useEffect(() => {
     const path = 'posts';
@@ -151,40 +87,28 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
 
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!newPost.trim() && !uploadedImageUrl) || !user || isPosting || isUploading) return;
+    if (!newPost.trim() || !user || isPosting) return;
 
     setIsPosting(true);
     const path = 'posts';
     
-    // Explicitly handle fields to ensure they match rules
     const postData = {
       authorId: user.uid,
       authorName: isAnonymous ? 'Anonymous Member' : (profile?.displayName || user.displayName || 'Campus Member'),
       content: newPost,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-      reactions: {}, // Strict empty object as requested
+      reactions: {}, 
       commentCount: 0,
-      // Optional fields retained for features
-      imageUrl: uploadedImageUrl || null,
       authorPhoto: isAnonymous ? null : (profile?.photoURL || user.photoURL || null),
       isAnonymous: !!isAnonymous
     };
 
-    console.log('Attempting to post with strict alignment:', postData);
-
     try {
       await addDoc(collection(db, path), postData);
       setNewPost('');
-      setSelectedImage(null);
-      setImagePreview(null);
-      setUploadedImageUrl(null);
       setIsAnonymous(false);
-      console.log('Post successful');
     } catch (error: any) {
-      console.error("Post failed dramatically:", error);
-      const errorMessage = error?.message || 'Unknown error';
-      alert(`POSTING ERROR: ${errorMessage}\n\nPlease check if you have a stable connection and are logged in correctly.`);
       handleFirestoreError(error, OperationType.WRITE, path, auth);
     } finally {
       setIsPosting(false);
@@ -260,92 +184,28 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
               </div>
             </div>
 
-            {imagePreview && (
-              <div className="relative w-full max-h-64 rounded-2xl overflow-hidden border border-brand-border/30 bg-brand-bg group ml-0 sm:ml-14">
-                <img src={imagePreview} alt="Preview" className="w-full h-full object-contain" />
-                
-                {(isUploading || isCompressing) && (
-                  <div className="absolute inset-0 bg-brand-ink/40 flex flex-col items-center justify-center backdrop-blur-[2px]">
-                    {isCompressing ? (
-                      <div className="flex flex-col items-center gap-2">
-                        <Loader2 size={24} className="text-white animate-spin" />
-                        <span className="text-[10px] font-black text-white uppercase tracking-widest animate-pulse">Optimizing Image...</span>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="w-24 h-1 bg-white/20 rounded-full overflow-hidden mb-2">
-                          <motion.div 
-                            initial={{ width: 0 }}
-                            animate={{ width: `${uploadProgress}%` }}
-                            className="h-full bg-brand-primary"
-                          />
-                        </div>
-                        <span className="text-[10px] font-black text-white uppercase tracking-widest">{Math.round(uploadProgress)}%</span>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {uploadedImageUrl && !isUploading && (
-                  <div className="absolute top-2 left-2 flex items-center gap-1.5 px-3 py-1 bg-green-500 text-white rounded-full shadow-lg">
-                    <CheckCircle size={12} />
-                    <span className="text-[9px] font-black uppercase tracking-widest">Ready</span>
-                  </div>
-                )}
-
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-[#f0f0f0] ml-0 sm:ml-14">
+              <div className="flex items-center gap-2">
                 <button 
                   type="button"
-                  disabled={isUploading}
-                  onClick={() => { 
-                    setSelectedImage(null); 
-                    setImagePreview(null); 
-                    setUploadedImageUrl(null);
-                  }}
-                  className="absolute top-2 right-2 p-1.5 bg-brand-ink/80 text-white rounded-full hover:bg-brand-ink transition-all active:scale-95 disabled:hidden"
+                  onClick={() => setIsAnonymous(!isAnonymous)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-2 rounded-full transition-all font-black text-[10px] uppercase tracking-widest border",
+                    isAnonymous ? "bg-brand-ink text-white border-brand-ink" : "bg-brand-bg text-brand-secondary border-brand-border/50 hover:bg-white"
+                  )}
                 >
-                  <X size={14} />
+                  <Users size={12} />
+                  {isAnonymous ? 'Anonymous' : 'Public'}
                 </button>
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-[#f0f0f0] ml-0 sm:ml-14">
-              <div className="flex items-center justify-between sm:justify-start gap-2">
-                <div className="flex items-center gap-2">
-                  <button 
-                    type="button"
-                    onClick={() => setIsAnonymous(!isAnonymous)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-2 rounded-full transition-all font-black text-[10px] uppercase tracking-widest border",
-                      isAnonymous ? "bg-brand-ink text-white border-brand-ink" : "bg-brand-bg text-brand-secondary border-brand-border/50 hover:bg-white"
-                    )}
-                  >
-                    <Users size={12} />
-                    {isAnonymous ? 'Anonymous' : 'Public'}
-                  </button>
-                  <div className="flex items-center">
-                    <button type="button" className="p-2 text-brand-secondary hover:text-brand-primary transition-colors"><Smile size={18} /></button>
-                    <button 
-                      type="button" 
-                      onClick={() => fileInputRef.current?.click()}
-                      className="p-2 text-brand-secondary hover:text-brand-primary transition-colors"
-                    >
-                      <ImageIcon size={18} />
-                    </button>
-                    <input 
-                      type="file" 
-                      ref={fileInputRef}
-                      onChange={handleImageSelect}
-                      accept="image/*"
-                      className="hidden"
-                    />
-                  </div>
+                <div className="flex items-center">
+                  <button type="button" className="p-2 text-brand-secondary hover:text-brand-primary transition-colors"><Smile size={18} /></button>
                 </div>
               </div>
               
               <motion.button 
                 whileTap={{ scale: 0.98 }}
                 type="submit"
-                disabled={(!newPost.trim() && !uploadedImageUrl) || isPosting || isUploading || isCompressing}
+                disabled={!newPost.trim() || isPosting}
                 className="bg-brand-primary text-white px-8 py-3 sm:py-2 rounded-full font-black text-[11px] uppercase tracking-widest hover:brightness-110 active:brightness-95 transition-all disabled:opacity-50 disabled:scale-100 shadow-neon flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 {isPosting ? <Loader2 size={16} className="animate-spin" /> : <>Post <Send size={14} /></>}
@@ -375,7 +235,6 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
                   key={post.id} 
                   post={post} 
                   onUserClick={(uid) => setSelectedUserUid(uid)}
-                  onImageClick={(url) => setViewingImage(url)}
                 />
               ))}
             </AnimatePresence>
@@ -416,27 +275,6 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
       <AnimatePresence>
         {selectedUserUid && (
           <UserProfileModal targetUid={selectedUserUid} onClose={() => setSelectedUserUid(null)} />
-        )}
-        {viewingImage && (
-          <div 
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-brand-ink/95 backdrop-blur-md"
-            onClick={() => setViewingImage(null)}
-          >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="relative max-w-full max-h-full"
-            >
-              <img src={viewingImage} alt="Full view" className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-huge" />
-              <button 
-                className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-colors"
-                onClick={() => setViewingImage(null)}
-              >
-                <X size={32} />
-              </button>
-            </motion.div>
-          </div>
         )}
         {isEventModalOpen && (
           <EventModal onClose={() => setIsEventModalOpen(false)} />
@@ -586,13 +424,23 @@ function ModuleModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick: (uid: string) => void, onImageClick: (url: string) => void }) {
+function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string) => void }) {
   const { user, profile, auth } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
+
+  const REACTION_TYPES = [
+    { key: 'like', emoji: '👍', label: 'Like' },
+    { key: 'heart', emoji: '❤️', label: 'Heart' },
+    { key: 'blush', emoji: '😊', label: 'Blush' },
+    { key: 'laugh', emoji: '😂', label: 'Laugh' },
+    { key: 'sad', emoji: '😢', label: 'Sad' },
+    { key: 'angry', emoji: '😠', label: 'Angry' },
+  ];
 
   useEffect(() => {
     if (!isEditing) {
@@ -606,15 +454,17 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
     ? post.content.substring(0, TRUNCATE_LIMIT) + '...' 
     : post.content;
 
-  const handleReact = async () => {
+  const handleReact = async (reactionKey: string) => {
     if (!user) return;
     const path = `posts/${post.id}`;
     try {
       const postRef = doc(db, 'posts', post.id);
-      const hasReacted = post.reactions['heart']?.includes(user.uid);
+      const hasReacted = post.reactions[reactionKey]?.includes(user.uid);
       
+      // If user had a different reaction, we might want to remove it first? 
+      // For simplicity, let's just toggle the specific one
       await updateDoc(postRef, {
-        [`reactions.heart`]: hasReacted ? arrayRemove(user.uid) : arrayUnion(user.uid)
+        [`reactions.${reactionKey}`]: hasReacted ? arrayRemove(user.uid) : arrayUnion(user.uid)
       });
 
       if (!hasReacted && user.uid !== post.authorId) {
@@ -627,6 +477,7 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
           link: `/campus`
         });
       }
+      setShowReactionPicker(false);
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, path, auth);
     }
@@ -779,21 +630,6 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
                 )}
               </p>
             </motion.div>
-            
-            {post.imageUrl && (
-              <div 
-                onClick={() => onImageClick(post.imageUrl!)}
-                className="rounded-xl overflow-hidden border border-brand-border/30 bg-brand-bg group/img relative cursor-zoom-in active:scale-[0.98] transition-transform"
-              >
-                <img 
-                  src={post.imageUrl} 
-                  alt="Post content" 
-                  className="w-full max-h-80 object-cover transition-transform duration-500 group-hover/img:scale-105" 
-                  referrerPolicy="no-referrer" 
-                />
-                <div className="absolute inset-0 bg-brand-ink/0 group-hover/img:bg-brand-ink/5 transition-colors" />
-              </div>
-            )}
 
             {post.isModule && post.fileUrl && (
               <a 
@@ -816,24 +652,50 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
         )}
 
         <div className="flex items-center gap-2 pt-3 border-t border-brand-border/30">
-          <motion.button 
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleReact}
-            className={cn(
-              "flex items-center gap-1.5 py-1.5 px-3 rounded-xl transition-colors font-black text-[10px] uppercase tracking-widest border",
-              post.reactions?.['heart']?.includes(user?.uid || '')
-                ? "bg-red-50 text-red-500 border-red-100 shadow-sm" 
-                : "bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-red-500 hover:border-red-200"
-            )}
-          >
-            <Heart 
-              size={14} 
-              className={cn("transition-transform", post.reactions?.['heart']?.includes(user?.uid || '') && "animate-pulse")}
-              fill={post.reactions?.['heart']?.includes(user?.uid || '') ? "currentColor" : "none"} 
-            />
-            {post.reactions?.['heart']?.length || 0}
-          </motion.button>
+          <div className="relative">
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowReactionPicker(!showReactionPicker)}
+              className={cn(
+                "flex items-center gap-1.5 py-1.5 px-3 rounded-xl transition-colors font-black text-[10px] uppercase tracking-widest border",
+                Object.values(post.reactions || {}).some(uids => uids.includes(user?.uid || ''))
+                  ? "bg-brand-primary/10 text-brand-primary border-brand-primary/20 shadow-sm" 
+                  : "bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-brand-primary hover:border-brand-primary/20"
+              )}
+            >
+              <Heart 
+                size={14} 
+                className={cn(Object.values(post.reactions || {}).some(uids => uids.includes(user?.uid || '')) && "fill-current animate-pulse")} 
+              />
+              React
+            </motion.button>
+
+            <AnimatePresence>
+              {showReactionPicker && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                  className="absolute bottom-full left-0 mb-2 p-1.5 bg-white border border-brand-border shadow-huge rounded-2xl flex items-center gap-1 z-20"
+                >
+                  {REACTION_TYPES.map((rt) => (
+                    <button 
+                      key={rt.key}
+                      onClick={() => handleReact(rt.key)}
+                      className={cn(
+                        "w-9 h-9 flex items-center justify-center rounded-xl hover:bg-brand-bg transition-all active:scale-125 text-xl",
+                        post.reactions?.[rt.key]?.includes(user?.uid || '') && "bg-brand-primary/10 scale-110"
+                      )}
+                      title={rt.label}
+                    >
+                      {rt.emoji}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           
           <motion.button 
             whileHover={{ scale: 1.05 }}
@@ -868,6 +730,22 @@ function PostCard({ post, onUserClick, onImageClick }: { post: Post, onUserClick
             Share
           </motion.button>
         </div>
+
+        {/* Reaction Summary Bar */}
+        {Object.entries(post.reactions || {}).some(([_, uids]) => uids.length > 0) && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {REACTION_TYPES.map(rt => {
+              const uids = post.reactions?.[rt.key] || [];
+              if (uids.length === 0) return null;
+              return (
+                <div key={rt.key} className="flex items-center gap-1.5 px-2 py-1 bg-brand-bg border border-brand-border/10 rounded-full text-[10px] font-black text-brand-secondary shadow-sm">
+                  <span>{rt.emoji}</span>
+                  <span>{uids.length}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <AnimatePresence>
@@ -917,6 +795,7 @@ function CommentsList({ postId, currentCommentCount, onUserClick }: { postId: st
         authorId: user.uid,
         authorName: profile?.displayName || user.displayName || 'Anonymous',
         authorPhoto: profile?.photoURL || user.photoURL || null,
+        reactions: {},
         createdAt: serverTimestamp()
       });
       // Increment comment count on post
@@ -964,6 +843,22 @@ function CommentsList({ postId, currentCommentCount, onUserClick }: { postId: st
     }
   };
 
+  const handleCommentReact = async (commentId: string, reactionKey: string, currentReactions: Record<string, string[]>) => {
+    if (!user) return;
+    const path = `posts/${postId}/comments/${commentId}`;
+    try {
+      const commentRef = doc(db, `posts/${postId}/comments`, commentId);
+      const uids = currentReactions[reactionKey] || [];
+      const hasReacted = uids.includes(user.uid);
+
+      await updateDoc(commentRef, {
+        [`reactions.${reactionKey}`]: hasReacted ? arrayRemove(user.uid) : arrayUnion(user.uid)
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path, auth);
+    }
+  };
+
   return (
     <motion.div 
       initial={{ height: 0, opacity: 0 }}
@@ -981,6 +876,7 @@ function CommentsList({ postId, currentCommentCount, onUserClick }: { postId: st
                 onDelete={() => handleCommentDelete(c.id)}
                 onUpdate={(content) => handleCommentUpdate(c.id, content)}
                 onUserClick={onUserClick}
+                onReact={(key) => handleCommentReact(c.id, key, c.reactions || {})}
               />
             ))}
           </div>
@@ -1006,10 +902,20 @@ function CommentsList({ postId, currentCommentCount, onUserClick }: { postId: st
   );
 }
 
-function CommentItem({ comment, onDelete, onUpdate, onUserClick }: { comment: CommentType, onDelete: () => void, onUpdate: (content: string) => void, onUserClick: (uid: string) => void }) {
+function CommentItem({ comment, onDelete, onUpdate, onUserClick, onReact }: { comment: CommentType, onDelete: () => void, onUpdate: (content: string) => void, onUserClick: (uid: string) => void, onReact: (key: string) => void }) {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
+
+  const REACTION_TYPES = [
+    { key: 'like', emoji: '👍', label: 'Like' },
+    { key: 'heart', emoji: '❤️', label: 'Heart' },
+    { key: 'blush', emoji: '😊', label: 'Blush' },
+    { key: 'laugh', emoji: '😂', label: 'Laugh' },
+    { key: 'sad', emoji: '😢', label: 'Sad' },
+    { key: 'angry', emoji: '😠', label: 'Angry' },
+  ];
 
   const handleSave = () => {
     onUpdate(editContent);
@@ -1062,8 +968,60 @@ function CommentItem({ comment, onDelete, onUpdate, onUserClick }: { comment: Co
             </div>
           </div>
         ) : (
-          <div className="bg-brand-surface border border-brand-border/30 p-2 rounded-xl">
+          <div className="bg-brand-surface border border-brand-border/30 p-2 rounded-xl relative group">
              <p className="text-xs font-medium text-brand-ink leading-snug">{comment.content}</p>
+             
+             {/* Comment Reactions */}
+             <div className="flex flex-wrap gap-1 mt-1.5 min-h-[16px]">
+               {Object.entries(comment.reactions || {}).map(([key, uids]) => {
+                 if (uids.length === 0) return null;
+                 const rt = REACTION_TYPES.find(r => r.key === key);
+                 if (!rt) return null;
+                 return (
+                   <button 
+                    key={key}
+                    onClick={() => onReact(key)}
+                    className={cn(
+                      "flex items-center gap-0.5 px-1 bg-brand-bg border border-brand-border/10 rounded-full text-[8px] font-black transition-all",
+                      uids.includes(user?.uid || '') ? "text-brand-primary border-brand-primary/20" : "text-brand-secondary"
+                    )}
+                   >
+                     <span>{rt.emoji}</span>
+                     <span>{uids.length}</span>
+                   </button>
+                 );
+               })}
+               
+               <div className="relative">
+                 <button 
+                  onClick={() => setShowReactionPicker(!showReactionPicker)}
+                  className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-brand-secondary hover:text-brand-primary"
+                 >
+                   <Smile size={10} />
+                 </button>
+                 
+                 <AnimatePresence>
+                   {showReactionPicker && (
+                     <motion.div 
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        className="absolute bottom-full left-0 mb-1 p-1 bg-white border border-brand-border shadow-lg rounded-xl flex items-center gap-0.5 z-10"
+                     >
+                       {REACTION_TYPES.map(rt => (
+                         <button 
+                          key={rt.key}
+                          onClick={() => { onReact(rt.key); setShowReactionPicker(false); }}
+                          className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-brand-bg transition-colors text-sm"
+                         >
+                           {rt.emoji}
+                         </button>
+                       ))}
+                     </motion.div>
+                   )}
+                 </AnimatePresence>
+               </div>
+             </div>
           </div>
         )}
       </div>
