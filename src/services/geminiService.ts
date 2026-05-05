@@ -22,24 +22,18 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 export async function askGuide(question: string, history: { role: 'user' | 'model', parts: { text: string }[] }[] = []) {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-pro-preview",
+      model: "gemini-3-flash-preview",
       contents: [...history, { role: 'user', parts: [{ text: question }] }],
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.7,
-        tools: [
-          { googleSearch: {} }
-        ],
-        toolConfig: { includeServerSideToolInvocations: true }
+        temperature: 0.8,
       }
     });
 
     return response.text || "I'm sorry, I couldn't generate a response.";
   } catch (error: any) {
     console.error("AI Assistant error:", error);
-    if (error.message?.includes("400") || error.message?.includes("consecutive")) {
-       return "I apologize, my internal logic is confused by the conversation history. Let's try starting a fresh session by clicking the trash icon!";
-    }
-    return "I'm sorry, I'm having trouble connecting right now. Please check your connection or try a shorter question.";
+    // Return a more descriptive error or check for common failures
+    return "I apologize, my neural link is temporarily unstable. Please try a shorter question or reset our session using the trash icon.";
   }
 }
