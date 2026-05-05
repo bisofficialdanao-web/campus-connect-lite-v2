@@ -111,9 +111,12 @@ service cloud.firestore {
     }
 
     function isValidResource(data) {
-      return data.keys().hasAll(['title', 'link', 'uploaderId', 'uploaderName', 'createdAt'])
+      return data.keys().hasAll(['title', 'link', 'uploaderId', 'uploaderName', 'createdAt', 'subject', 'gradeLevel'])
+        && data.keys().size() == 7
         && data.title is string && data.title.size() <= 200
         && data.link is string && data.link.size() <= 2048
+        && data.subject is string
+        && data.gradeLevel is string
         && data.uploaderId == request.auth.uid
         && data.createdAt == request.time;
     }

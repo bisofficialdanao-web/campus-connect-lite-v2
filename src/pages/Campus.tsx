@@ -53,6 +53,9 @@ import { Post, Comment as CommentType } from '../types';
 import { createNotification } from '../lib/notifications';
 import { askGuide } from '../services/geminiService';
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 import { PageView } from '../components/BottomNav';
 
@@ -1208,7 +1211,7 @@ function EventModal({ onClose }: { onClose: () => void }) {
 
 function AITutor({ onClose }: { onClose: () => void }) {
   const [messages, setMessages] = useState<{ role: 'user' | 'guide', text: string }[]>([
-    { role: 'guide', text: "Hello! I am 'The Guide'. I am here to help you understand topics step-by-step. I won't give you direct answers, but I'll guide you to find them yourself. What can I help you with?" }
+    { role: 'guide', text: "Hello! I am your Socratic AI Tutor. I help you learn by guiding you through problems without giving direct answers. What would you like to explore today?" }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -1229,7 +1232,15 @@ function AITutor({ onClose }: { onClose: () => void }) {
     setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
     setIsTyping(true);
 
-    const guideResponse = await askGuide(userMessage);
+    // Convert internal message format to Gemini API format
+    const history = messages
+      .filter(m => m.text !== "Hello! I am your Socratic AI Tutor. I help you learn by guiding you through problems without giving direct answers. What would you like to explore today?")
+      .map(m => ({
+        role: m.role === 'guide' ? 'model' as const : 'user' as const,
+        parts: [{ text: m.text }]
+      }));
+
+    const guideResponse = await askGuide(userMessage, history);
     setMessages(prev => [...prev, { role: 'guide', text: guideResponse }]);
     setIsTyping(false);
   };
@@ -1264,7 +1275,14 @@ function AITutor({ onClose }: { onClose: () => void }) {
                   ? "bg-brand-primary text-white rounded-tr-none" 
                   : "bg-white text-brand-ink border border-brand-border/50 rounded-tl-none markdown-body prose prose-sm prose-p:my-0"
               )}>
-                {m.role === 'guide' ? <ReactMarkdown>{m.text}</ReactMarkdown> : m.text}
+                {m.role === 'guide' ? (
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkMath]} 
+                    rehypePlugins={[rehypeKatex]}
+                  >
+                    {m.text}
+                  </ReactMarkdown>
+                ) : m.text}
               </div>
               <span className="text-[8px] font-black uppercase tracking-widest text-brand-secondary mt-1 px-1 opacity-50">
                 {m.role === 'user' ? 'You' : 'The Guide'}
