@@ -7,7 +7,6 @@ import Classes from './pages/Classes';
 import Chats from './pages/Chats';
 import Profile from './pages/Profile';
 import Library from './pages/Library';
-import Guide from './pages/Guide';
 import { GraduationCap, BookOpen, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -98,7 +97,6 @@ function AppContent() {
     switch (currentView) {
       case 'campus': return <Campus onViewChange={setCurrentView} />;
       case 'library': return <Library />;
-      case 'guide': return <Guide />;
       case 'classes': return <Classes onViewChange={setCurrentView} />;
       case 'chats': return <Chats />;
       case 'profile': return <Profile />;

@@ -49,6 +49,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
 import { regulateImage } from '../lib/imageRegulator';
 import UserProfileModal from '../components/UserProfileModal';
+import AITutor from '../components/AITutor';
 import { Post, Comment as CommentType } from '../types';
 import { createNotification } from '../lib/notifications';
 
@@ -281,7 +282,25 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
         {isModuleModalOpen && (
           <ModuleModal onClose={() => setIsModuleModalOpen(false)} />
         )}
+        {isAITutorOpen && (
+          <AITutor onClose={() => setIsAITutorOpen(false)} />
+        )}
       </AnimatePresence>
+
+      {/* Neon Pink Floating AI Tutor Button */}
+      <motion.button
+        whileHover={{ scale: 1.1, rotate: 5 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={() => setIsAITutorOpen(true)}
+        className="fixed bottom-24 right-6 w-14 h-14 bg-[#ff00ff] text-white rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,0,255,0.6)] z-[60] hover:brightness-110 transition-all border-2 border-white/40 group overflow-hidden"
+        title="Ask Study Guide AI"
+      >
+        <Sparkles size={28} className="group-hover:animate-pulse" />
+        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+        </span>
+      </motion.button>
     </div>
   );
 }
