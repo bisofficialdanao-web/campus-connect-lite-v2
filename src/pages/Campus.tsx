@@ -26,7 +26,8 @@ import {
   BookOpen,
   Download,
   FileText,
-  CheckCircle
+  CheckCircle,
+  Sparkles
 } from 'lucide-react';
 import { 
   collection, 
@@ -50,6 +51,8 @@ import { regulateImage } from '../lib/imageRegulator';
 import UserProfileModal from '../components/UserProfileModal';
 import { Post, Comment as CommentType } from '../types';
 import { createNotification } from '../lib/notifications';
+import { askGuide } from '../services/geminiService';
+import ReactMarkdown from 'react-markdown';
 
 import { PageView } from '../components/BottomNav';
 
@@ -72,6 +75,7 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [isModuleModalOpen, setIsModuleModalOpen] = useState(false);
+  const [isAITutorOpen, setIsAITutorOpen] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const moduleFileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -436,7 +440,20 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
         {isModuleModalOpen && (
           <ModuleModal onClose={() => setIsModuleModalOpen(false)} />
         )}
+        {isAITutorOpen && (
+          <AITutor onClose={() => setIsAITutorOpen(false)} />
+        )}
       </AnimatePresence>
+
+      {/* Floating AI Tutor Button */}
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setIsAITutorOpen(true)}
+        className="fixed bottom-24 right-6 w-14 h-14 bg-[#ff00ff] text-white rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,0,255,0.5)] z-50 hover:brightness-110 transition-all border-2 border-white/20"
+      >
+        <Sparkles size={28} />
+      </motion.button>
     </div>
   );
 }
@@ -1183,6 +1200,104 @@ function EventModal({ onClose }: { onClose: () => void }) {
               {isSaving ? <Loader2 size={16} className="animate-spin" /> : 'Schedule Event'}
             </button>
           </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+}
+
+function AITutor({ onClose }: { onClose: () => void }) {
+  const [messages, setMessages] = useState<{ role: 'user' | 'guide', text: string }[]>([
+    { role: 'guide', text: "Hello! I am 'The Guide'. I am here to help you understand topics step-by-step. I won't give you direct answers, but I'll guide you to find them yourself. What can I help you with?" }
+  ]);
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, isTyping]);
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isTyping) return;
+
+    const userMessage = input;
+    setInput('');
+    setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
+    setIsTyping(true);
+
+    const guideResponse = await askGuide(userMessage);
+    setMessages(prev => [...prev, { role: 'guide', text: guideResponse }]);
+    setIsTyping(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-4 bg-brand-ink/40 backdrop-blur-sm">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 100 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 100 }}
+        className="w-full max-w-md bg-brand-surface rounded-t-3xl sm:rounded-3xl border border-brand-border shadow-huge overflow-hidden flex flex-col h-[80vh] sm:h-[600px]"
+      >
+        <div className="p-4 border-b border-brand-border/50 bg-[#ff00ff] flex items-center justify-between text-white shadow-lg">
+          <div className="flex items-center gap-2">
+            <Sparkles size={20} />
+            <span className="text-[12px] font-black uppercase tracking-widest">Socratic AI Tutor</span>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-full transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar bg-brand-bg/30">
+          {messages.map((m, i) => (
+            <div key={i} className={cn(
+              "flex flex-col max-w-[85%]",
+              m.role === 'user' ? "ml-auto items-end" : "mr-auto items-start"
+            )}>
+              <div className={cn(
+                "p-4 rounded-2xl text-[13px] font-medium leading-relaxed shadow-sm",
+                m.role === 'user' 
+                  ? "bg-brand-primary text-white rounded-tr-none" 
+                  : "bg-white text-brand-ink border border-brand-border/50 rounded-tl-none markdown-body prose prose-sm prose-p:my-0"
+              )}>
+                {m.role === 'guide' ? <ReactMarkdown>{m.text}</ReactMarkdown> : m.text}
+              </div>
+              <span className="text-[8px] font-black uppercase tracking-widest text-brand-secondary mt-1 px-1 opacity-50">
+                {m.role === 'user' ? 'You' : 'The Guide'}
+              </span>
+            </div>
+          ))}
+          {isTyping && (
+            <div className="flex items-center gap-2 text-brand-secondary px-2">
+              <div className="flex gap-1">
+                <div className="w-1.5 h-1.5 bg-[#ff00ff] rounded-full animate-bounce" />
+                <div className="w-1.5 h-1.5 bg-[#ff00ff] rounded-full animate-bounce delay-75" />
+                <div className="w-1.5 h-1.5 bg-[#ff00ff] rounded-full animate-bounce delay-150" />
+              </div>
+              <span className="text-[8px] font-black uppercase tracking-widest text-[#ff00ff]">Analyzing...</span>
+            </div>
+          )}
+        </div>
+
+        <form onSubmit={handleSend} className="p-4 border-t border-brand-border/50 bg-white flex gap-2">
+          <input 
+            type="text" 
+            placeholder="Ask your tutor anything..."
+            className="flex-1 bg-brand-bg border border-brand-border/50 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-[#ff00ff] transition-colors"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+          />
+          <button 
+            type="submit"
+            disabled={!input.trim() || isTyping}
+            className="bg-[#ff00ff] text-white p-3 rounded-xl hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 shadow-md"
+          >
+            <Send size={18} />
+          </button>
         </form>
       </motion.div>
     </div>

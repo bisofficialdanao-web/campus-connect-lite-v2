@@ -9,6 +9,7 @@ import Profile from './pages/Profile';
 import Library from './pages/Library';
 import { GraduationCap, BookOpen, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function AppContent() {
   const { user, profile, loading, signIn, updateRole, activeDM } = useAuth();
@@ -121,8 +122,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
