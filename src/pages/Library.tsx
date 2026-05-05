@@ -174,13 +174,14 @@ export default function Library() {
 
   return (
     <div className="space-y-6 min-h-full pb-20">
-      {/* Dynamic Header & Back Button */}
+      {/* Header & Back Button Section */}
       <div className="flex flex-col gap-4">
         {(selectedSubject || selectedGrade) && (
           <button 
             onClick={() => {
               if (selectedGrade) setSelectedGrade(null);
               else setSelectedSubject(null);
+              setSearchQuery('');
             }}
             className="flex items-center gap-2 self-start px-4 py-2 bg-white border border-brand-border rounded-full text-[11px] font-black uppercase tracking-widest text-brand-secondary shadow-sm hover:translate-x-[-4px] transition-all"
           >
@@ -214,6 +215,26 @@ export default function Library() {
             </button>
           )}
         </div>
+      </div>
+
+      {/* Global Search Bar */}
+      <div className="relative group">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-secondary/50 group-focus-within:text-brand-primary transition-colors" size={18} />
+        <input 
+          type="text"
+          placeholder={selectedGrade ? `Search in this folder...` : "Search all titles or teachers..."}
+          className="w-full bg-white border border-brand-border rounded-2xl pl-12 pr-4 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 transition-all shadow-sm font-medium"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        {searchQuery && (
+          <button 
+            onClick={() => setSearchQuery('')}
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 bg-brand-bg rounded-full hover:bg-brand-border transition-colors"
+          >
+            <X size={14} />
+          </button>
+        )}
       </div>
 
       <AnimatePresence>
@@ -304,7 +325,44 @@ export default function Library() {
 
       {/* Main Content Areas */}
       <AnimatePresence mode="wait">
-        {!selectedSubject ? (
+        {searchQuery && !selectedGrade ? (
+          // Search Results View (Global or within Subject)
+          <motion.div 
+            key="search-results"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="space-y-4"
+          >
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-brand-secondary">
+                Search Results ({resources.filter(r => r.title.toLowerCase().includes(searchQuery.toLowerCase()) || r.uploaderName.toLowerCase().includes(searchQuery.toLowerCase())).length})
+              </h3>
+            </div>
+            
+            {resources.filter(r => 
+              r.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+              r.uploaderName.toLowerCase().includes(searchQuery.toLowerCase())
+            ).length > 0 ? (
+              <div className="grid grid-cols-1 gap-3">
+                {resources
+                  .filter(r => 
+                    r.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                    r.uploaderName.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  .map(resource => (
+                    <ResourceCard key={resource.id} resource={resource} getFileIcon={getFileIcon} />
+                  ))}
+              </div>
+            ) : (
+              <div className="bg-white border border-brand-border border-dashed rounded-3xl p-12 text-center">
+                <Search className="mx-auto text-brand-secondary mb-4 opacity-20" size={48} />
+                <h3 className="font-black text-brand-ink text-sm mb-1 uppercase tracking-widest">No results found</h3>
+                <p className="text-xs text-brand-secondary">Try a different keyword or teacher name.</p>
+              </div>
+            )}
+          </motion.div>
+        ) : !selectedSubject ? (
           // 1. Subject Grid View
           <motion.div 
             key="subjects"
@@ -368,18 +426,6 @@ export default function Library() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4"
           >
-            {/* Search within filtered list */}
-            <div className="relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-secondary/50 group-focus-within:text-brand-primary transition-colors" size={16} />
-              <input 
-                type="text"
-                placeholder={`Search in ${selectedSubject} ${selectedGrade}...`}
-                className="w-full bg-white border border-brand-border rounded-2xl pl-11 pr-4 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 transition-all shadow-sm font-medium"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
             {resources.filter(r => 
               r.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
               r.uploaderName.toLowerCase().includes(searchQuery.toLowerCase())
