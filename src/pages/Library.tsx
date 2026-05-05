@@ -127,10 +127,47 @@ export default function Library() {
   };
 
   const getFileIcon = (link: string) => {
-    if (link.includes('youtube.com') || link.includes('youtu.be')) {
-      return { icon: PlayCircle, color: 'text-red-600', label: 'YouTube', bg: 'bg-red-50', border: 'border-red-100' };
+    const isYoutube = link.includes('youtube.com') || link.includes('youtu.be');
+    const isDrive = link.includes('drive.google.com') || link.includes('docs.google.com');
+    const isPdf = link.toLowerCase().includes('.pdf');
+    
+    if (isYoutube) {
+      return { 
+        icon: PlayCircle, 
+        color: 'text-red-600', 
+        label: 'YouTube', 
+        bg: 'bg-red-50', 
+        border: 'border-red-200' 
+      };
     }
-    return { icon: FileText, color: 'text-brand-primary', label: 'Document', bg: 'bg-blue-50', border: 'border-blue-100' };
+    
+    if (isDrive) {
+      return { 
+        icon: FileText, 
+        color: 'text-green-600', 
+        label: 'Google Drive', 
+        bg: 'bg-green-50', 
+        border: 'border-green-200' 
+      };
+    }
+
+    if (isPdf) {
+      return { 
+        icon: FileText, 
+        color: 'text-orange-600', 
+        label: 'PDF Document', 
+        bg: 'bg-orange-50', 
+        border: 'border-orange-200' 
+      };
+    }
+
+    return { 
+      icon: FileText, 
+      color: 'text-brand-primary', 
+      label: 'Document', 
+      bg: 'bg-blue-50', 
+      border: 'border-blue-100' 
+    };
   };
 
   const currentSubjectData = SUBJECTS.find(s => s.id === (selectedSubject || newSubject));
