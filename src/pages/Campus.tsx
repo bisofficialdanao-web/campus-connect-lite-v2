@@ -213,7 +213,7 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
         </div>
 
         {/* Posts Feed */}
-        <div className="space-y-4">
+        <div className="space-y-2">
           {loading ? (
             <div className="flex items-center justify-center py-20 bg-brand-surface rounded-2xl border border-brand-border/50">
               <div className="w-6 h-6 border-2 border-brand-primary border-t-transparent rounded-full animate-spin" />
@@ -430,6 +430,18 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
   const [isExpanded, setIsExpanded] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
+  const [showOptions, setShowOptions] = useState(false);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowOptions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const REACTION_TYPES = [
     { key: 'like', emoji: '👍', label: 'Like' },
@@ -519,95 +531,112 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "bg-white border border-brand-border/40 rounded-xl overflow-hidden shadow-soft p-4 w-full max-w-[600px] mx-auto",
+        "bg-white border border-brand-border/40 rounded-xl overflow-hidden shadow-soft p-3 w-full max-w-[600px] mx-auto",
         post.isModule && "border-blue-100"
       )}
     >
       {post.isModule && (
-        <div className="bg-blue-50 px-4 py-1.5 -mx-4 -mt-4 mb-4 flex items-center gap-2 border-b border-blue-100">
+        <div className="bg-blue-50 px-3 py-1.5 -mx-3 -mt-3 mb-3 flex items-center gap-2 border-b border-blue-100">
           <BookOpen size={12} className="text-blue-500" />
-          <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider leading-none">Module</span>
+          <span className="text-[9px] font-bold text-blue-600 uppercase tracking-wider leading-none">Module</span>
         </div>
       )}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-[12px]">
             <motion.button 
               whileTap={!post.isAnonymous ? { scale: 0.95 } : {}}
               onClick={() => !post.isAnonymous && onUserClick(post.authorId)}
               className={cn(
-                "w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden border transition-all",
+                "w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden border transition-all",
                 post.isAnonymous ? "bg-brand-ink text-white border-brand-ink" : "bg-brand-bg border-brand-border/30 hover:border-brand-primary"
               )}
             >
               {displayPhoto ? (
                 <img src={displayPhoto} alt="" className="w-full h-full object-cover" />
               ) : post.isAnonymous ? (
-                <Ghost size={18} className="opacity-80" />
+                <Ghost size={16} className="opacity-80" />
               ) : (
-                <span className="text-xs font-black text-brand-primary uppercase">{post.authorName?.[0] || 'U'}</span>
+                <span className="text-[10px] font-black text-brand-primary uppercase">{post.authorName?.[0] || 'U'}</span>
               )}
             </motion.button>
             <div className="text-left flex flex-col justify-center">
               <button 
                 onClick={() => !post.isAnonymous && onUserClick(post.authorId)}
                 className={cn(
-                  "text-[14px] font-bold tracking-tight leading-[1.2]",
+                  "text-[12px] font-semibold tracking-tight leading-[1.2] whitespace-nowrap",
                   post.isAnonymous ? "text-brand-ink/70 no-underline cursor-default" : "text-brand-ink cursor-pointer hover:text-brand-primary transition-colors"
                 )}
               >
                 {post.isAnonymous ? 'Anonymous Member' : post.authorName}
               </button>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-brand-secondary/60 font-medium leading-none">{timeLabel}</span>
+                <span className="text-[9px] text-slate-400 font-medium leading-none">{timeLabel}</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            {user?.uid === post.authorId && (
-              <>
-                <button 
-                  onClick={() => setIsEditing(!isEditing)}
-                  className={cn("p-1.5 rounded-lg transition-colors", isEditing ? "text-brand-primary bg-brand-primary/5" : "text-brand-secondary hover:text-brand-primary")}
+          <div className="flex items-center gap-1 relative" ref={dropdownRef}>
+            <button 
+              onClick={() => setShowOptions(!showOptions)}
+              className="text-brand-secondary p-1.5 hover:bg-brand-bg rounded-lg transition-colors"
+            >
+              <MoreHorizontal size={16} />
+            </button>
+            
+            <AnimatePresence>
+              {showOptions && user?.uid === post.authorId && (
+                <motion.div
+                  initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 5, scale: 0.95 }}
+                  className="absolute right-0 top-full mt-1 w-32 bg-white border border-brand-border shadow-huge rounded-xl py-1 z-30"
                 >
-                  <Edit3 size={14} />
-                </button>
-                <button onClick={handleDelete} className="p-1.5 text-brand-secondary hover:text-red-500 rounded-lg transition-colors">
-                  <Trash2 size={14} />
-                </button>
-              </>
-            )}
+                  <button 
+                    onClick={() => { setIsEditing(true); setShowOptions(false); }}
+                    className="w-full px-3 py-2 text-left text-[11px] font-medium text-brand-ink hover:bg-brand-bg flex items-center gap-2"
+                  >
+                    <Edit3 size={12} /> Edit
+                  </button>
+                  <button 
+                    onClick={() => { handleDelete(); setShowOptions(false); }}
+                    className="w-full px-3 py-2 text-left text-[11px] font-medium text-red-500 hover:bg-red-50 flex items-center gap-2"
+                  >
+                    <Trash2 size={12} /> Delete
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
         {isEditing ? (
-          <div className="space-y-2 mb-4">
+          <div className="space-y-2 mb-3">
             <textarea 
               value={editContent}
               disabled={isSaving}
               onChange={(e) => setEditContent(e.target.value)}
-              className="w-full bg-brand-bg border border-brand-border/50 rounded-lg p-3 text-sm font-medium focus:outline-none focus:border-brand-primary/30 min-h-[80px] transition-colors disabled:opacity-50"
+              className="w-full bg-brand-bg border border-brand-border/50 rounded-lg p-2.5 text-[11px] font-medium focus:outline-none focus:border-brand-primary/30 min-h-[70px] transition-colors disabled:opacity-50"
               placeholder="Edit your post..."
             />
             <div className="flex justify-end gap-2 pr-1">
               <button 
                 onClick={() => setIsEditing(false)} 
                 disabled={isSaving}
-                className="px-3 h-[30px] text-[11px] font-semibold uppercase text-brand-secondary hover:text-brand-ink transition-colors disabled:opacity-50"
+                className="px-3 h-[28px] text-[10px] font-semibold uppercase text-brand-secondary hover:text-brand-ink transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleEdit} 
                 disabled={isSaving || !editContent.trim()}
-                className="px-4 h-[30px] bg-brand-ink text-white rounded-lg text-[11px] font-semibold uppercase shadow-sm hover:brightness-110 transition-all disabled:opacity-50 min-w-[70px] flex items-center justify-center"
+                className="px-4 h-[28px] bg-brand-ink text-white rounded-lg text-[10px] font-semibold uppercase shadow-sm hover:brightness-110 transition-all disabled:opacity-50 min-w-[60px] flex items-center justify-center"
               >
-                {isSaving ? <Loader2 size={12} className="animate-spin" /> : 'Save'}
+                {isSaving ? <Loader2 size={10} className="animate-spin" /> : 'Save'}
               </button>
             </div>
           </div>
         ) : (
-          <div className="space-y-3 mb-5">
+          <div className="space-y-3 mb-4">
             <motion.div 
               onClick={() => shouldTruncate && setIsExpanded(!isExpanded)}
               className={cn(
@@ -615,10 +644,10 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
                 shouldTruncate && "cursor-pointer hover:opacity-90"
               )}
             >
-              <p className="text-brand-ink text-sm font-medium leading-relaxed whitespace-pre-wrap">
+              <p className="text-brand-ink text-[11px] font-medium leading-[1.5] whitespace-pre-wrap">
                 {displayContent}
                 {shouldTruncate && !isExpanded && (
-                  <span className="text-brand-primary font-bold text-[11px] ml-2 uppercase hover:underline">Read more</span>
+                  <span className="text-brand-primary font-bold text-[10px] ml-2 uppercase hover:underline">Read more</span>
                 )}
               </p>
             </motion.div>
@@ -628,32 +657,32 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
                 href={post.fileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 p-3 bg-brand-bg/50 rounded-xl border border-brand-border/20 hover:border-brand-primary/20 transition-colors group/module"
+                className="flex items-center gap-3 p-2 bg-brand-bg/50 rounded-xl border border-brand-border/20 hover:border-brand-primary/20 transition-colors group/module"
               >
-                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-blue-500 border border-brand-border/10">
-                  <FileText size={16} />
+                <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center text-blue-500 border border-brand-border/10">
+                  <FileText size={14} />
                 </div>
                 <div className="flex-1 overflow-hidden">
-                  <p className="text-[12px] font-bold text-brand-ink truncate">{post.moduleName || 'Download File'}</p>
+                  <p className="text-[11px] font-bold text-brand-ink truncate">{post.moduleName || 'Download File'}</p>
                 </div>
-                <Download size={14} className="text-brand-secondary group-hover/module:text-brand-primary transition-all" />
+                <Download size={12} className="text-brand-secondary group-hover/module:text-brand-primary transition-all" />
               </a>
             )}
           </div>
         )}
 
-        <div className="flex items-center justify-start gap-3 pt-4 border-t border-brand-border/20">
+        <div className="flex items-center justify-start gap-[12px] pt-3 border-t border-brand-border/20">
           <button 
             onClick={() => setShowReactionPicker(!showReactionPicker)}
             className={cn(
-              "flex items-center gap-1.5 h-[34px] px-3 py-1.5 rounded-lg transition-all font-semibold text-[12px] uppercase tracking-wide border",
+              "flex items-center gap-1.5 h-[30px] px-3 py-1 rounded-lg transition-all font-semibold text-[11px] uppercase tracking-wide border",
               Object.values(post.reactions || {}).some(uids => uids.includes(user?.uid || ''))
                 ? "bg-brand-primary/5 text-brand-primary border-brand-primary/20" 
                 : "bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-brand-primary hover:border-brand-primary/20"
             )}
           >
             <Heart 
-              size={14} 
+              size={16} 
               className={cn(Object.values(post.reactions || {}).some(uids => uids.includes(user?.uid || '')) && "fill-current")} 
             />
             <span>React</span>
@@ -662,13 +691,13 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
           <button 
             onClick={() => setShowComments(!showComments)}
             className={cn(
-              "flex items-center gap-1.5 h-[34px] px-3 py-1.5 rounded-lg transition-all font-semibold text-[12px] uppercase tracking-wide border",
+              "flex items-center gap-1.5 h-[30px] px-3 py-1 rounded-lg transition-all font-semibold text-[11px] uppercase tracking-wide border",
               showComments 
                 ? "bg-brand-ink text-white border-brand-ink" 
                 : "bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-brand-ink hover:border-brand-ink/20"
             )}
           >
-            <MessageSquare size={14} />
+            <MessageSquare size={16} />
             <span>{post.commentCount || 0}</span>
           </button>
 
@@ -678,9 +707,9 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
                 navigator.share({ title: 'Campus Post', text: post.content, url: window.location.href }).catch(() => {});
               }
             }}
-            className="flex items-center gap-1.5 h-[34px] px-3 py-1.5 rounded-lg transition-all font-semibold text-[12px] uppercase tracking-wide border bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-brand-ink hover:border-brand-ink/20"
+            className="flex items-center gap-1.5 h-[30px] px-3 py-1 rounded-lg transition-all font-semibold text-[11px] uppercase tracking-wide border bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-brand-ink hover:border-brand-ink/20"
           >
-            <Share2 size={14} />
+            <Share2 size={16} />
             <span>Share</span>
           </button>
         </div>
