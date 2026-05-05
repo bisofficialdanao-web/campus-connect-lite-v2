@@ -72,29 +72,36 @@ export interface Message {
 
 export interface Quiz {
   id: string;
-  classId: string;
+  classId?: string;
   title: string;
   questions: QuizQuestion[];
   teacherId: string;
+  subject: string;
+  gradeLevel: number;
   createdAt: any;
 }
 
 export interface QuizQuestion {
   question: string;
   options: string[];
-  correctAnswer: number;
 }
 
-export interface QuizResult {
+export interface QuizKey {
+  quizId: string;
+  answers: number[];
+}
+
+export interface Submission {
   id: string;
   quizId: string;
   studentId: string;
   studentName: string;
+  quizTitle: string;
   score: number;
   totalQuestions: number;
-  teacherId: string;
-  classId: string;
-  createdAt: any;
+  subject: string;
+  gradeLevel: number;
+  timestamp: any;
 }
 
 export interface Friendship {

@@ -48,21 +48,31 @@ service cloud.firestore {
     }
 
     function isValidQuiz(data) {
-      return data.keys().hasAll(['classId', 'title', 'questions', 'teacherId', 'createdAt'])
-        && data.keys().size() == 5
+      return data.keys().hasAll(['title', 'questions', 'teacherId', 'createdAt', 'subject', 'gradeLevel'])
+        && (data.keys().size() == 6 || (data.keys().size() == 7 && data.keys().contains('classId')))
         && data.title is string && data.title.size() <= 200
         && data.questions is list && data.questions.size() > 0
         && data.teacherId == request.auth.uid
+        && data.subject is string
+        && (data.gradeLevel is int || data.gradeLevel is float)
         && data.createdAt == request.time;
     }
 
-    function isValidQuizResult(data) {
-      return data.keys().hasAll(['quizId', 'studentId', 'studentName', 'score', 'totalQuestions', 'teacherId', 'classId', 'createdAt'])
-        && data.keys().size() == 8
+    function isValidQuizKey(data) {
+      return data.keys().hasAll(['quizId', 'answers'])
+        && data.keys().size() == 2
+        && data.quizId is string
+        && data.answers is list;
+    }
+
+    function isValidSubmission(data) {
+      return data.keys().hasAll(['quizId', 'studentId', 'studentName', 'quizTitle', 'score', 'totalQuestions', 'subject', 'gradeLevel', 'timestamp'])
+        && data.keys().size() == 9
+        && data.quizId is string
         && data.score is int
         && data.totalQuestions is int
         && data.studentId == request.auth.uid
-        && data.createdAt == request.time;
+        && data.timestamp == request.time;
     }
 
     function isValidFriendship(data) {
@@ -214,21 +224,24 @@ service cloud.firestore {
     
     // 6. Quizzes
     match /quizzes/{quizId} {
-      allow read: if isSignedIn() && (
-        request.auth.uid == resource.data.teacherId ||
-        request.auth.uid in get(/databases/$(database)/documents/classes/$(resource.data.classId)).data.studentIds
-      );
+      allow read: if isSignedIn();
       allow create: if isTeacher() && isValidQuiz(incoming());
       allow delete: if isTeacher() && resource.data.teacherId == request.auth.uid;
     }
 
-    // 7. Quiz Results
-    match /quizResults/{resultId} {
+    match /quizKeys/{quizId} {
+      allow read: if isSignedIn() && isTeacher() && get(/databases/$(database)/documents/quizzes/$(quizId)).data.teacherId == request.auth.uid;
+      allow create: if isTeacher() && isValidQuizKey(incoming());
+      allow delete: if isTeacher() && get(/databases/$(database)/documents/quizzes/$(quizId)).data.teacherId == request.auth.uid;
+    }
+
+    // 7. Submissions
+    match /submissions/{submissionId} {
       allow read: if isSignedIn() && (
-        request.auth.uid == resource.data.studentId ||
-        request.auth.uid == resource.data.teacherId
+        resource.data.studentId == request.auth.uid ||
+        get(/databases/$(database)/documents/quizzes/$(resource.data.quizId)).data.teacherId == request.auth.uid
       );
-      allow create: if isSignedIn() && isValidQuizResult(incoming());
+      allow create: if isSignedIn() && isValidSubmission(incoming());
     }
 
     // 8. Friendships

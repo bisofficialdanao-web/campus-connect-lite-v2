@@ -1,24 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, addDoc, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
-import { Quiz, QuizQuestion, QuizResult } from '../types';
-import { Plus, Trash2, BookOpen, Brain, Send, X, CheckCircle2, ChevronRight, BarChart3, Users } from 'lucide-react';
+import { Quiz, QuizQuestion, Submission } from '../types';
+import { Plus, Trash2, BookOpen, Brain, Send, X, CheckCircle2, ChevronRight, BarChart3, Users, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { createNotification } from '../lib/notifications';
-import { getDoc } from 'firebase/firestore';
 
 interface QuizSectionProps {
-  classId: string;
-  isTeacher: boolean;
+  subject: string;
+  gradeLevel: number;
 }
 
-export default function QuizSection({ classId, isTeacher }: QuizSectionProps) {
+export default function QuizSection({ subject, gradeLevel }: QuizSectionProps) {
   const { user, profile } = useAuth();
+  const isTeacher = profile?.role === 'teacher';
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [userResults, setUserResults] = useState<Record<string, QuizResult>>({});
+  const [userSubmissions, setUserSubmissions] = useState<Record<string, Submission>>({});
   const [showCreator, setShowCreator] = useState(false);
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [viewResultsQuizId, setViewResultsQuizId] = useState<string | null>(null);
@@ -26,7 +26,8 @@ export default function QuizSection({ classId, isTeacher }: QuizSectionProps) {
   useEffect(() => {
     const q = query(
       collection(db, 'quizzes'),
-      where('classId', '==', classId)
+      where('subject', '==', subject.toLowerCase()),
+      where('gradeLevel', '==', gradeLevel)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const qz: Quiz[] = [];
@@ -34,107 +35,111 @@ export default function QuizSection({ classId, isTeacher }: QuizSectionProps) {
       setQuizzes(qz.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
     });
     return () => unsubscribe();
-  }, [classId]);
+  }, [subject, gradeLevel]);
 
   useEffect(() => {
-    if (!user || isTeacher) return;
+    if (!user) return;
     const q = query(
-      collection(db, 'quizResults'),
+      collection(db, 'submissions'),
       where('studentId', '==', user.uid),
-      where('classId', '==', classId)
+      where('subject', '==', subject.toLowerCase()),
+      where('gradeLevel', '==', gradeLevel)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const results: Record<string, QuizResult> = {};
+      const results: Record<string, Submission> = {};
       snapshot.forEach(doc => {
-        const data = doc.data() as QuizResult;
+        const data = doc.data() as Submission;
         results[data.quizId] = data;
       });
-      setUserResults(results);
+      setUserSubmissions(results);
     });
     return () => unsubscribe();
-  }, [user, isTeacher, classId]);
+  }, [user, subject, gradeLevel]);
 
   const handleDelete = async (quizId: string) => {
     if (confirm('Delete this quiz?')) {
       await deleteDoc(doc(db, 'quizzes', quizId));
+      await deleteDoc(doc(db, 'quizKeys', quizId));
     }
   };
 
   return (
-    <div className="mt-6 pt-6 border-t border-brand-border space-y-4">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Brain size={18} className="text-brand-primary" />
-          <h3 className="text-xs font-black uppercase tracking-widest text-brand-ink">Class Quizzes</h3>
-        </div>
-        {isTeacher && (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[12px] font-bold text-brand-ink uppercase tracking-tight">Available Quizzes</h3>
+        {profile?.role === 'teacher' && (
           <button 
             onClick={() => setShowCreator(true)}
-            className="p-1 px-3 bg-brand-primary/10 text-brand-primary rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-primary hover:text-white transition-all flex items-center gap-1"
+            className="flex items-center gap-1.5 h-[28px] px-3 bg-brand-primary text-white rounded-lg text-[9px] font-bold uppercase tracking-wider hover:brightness-110 transition-all shadow-sm"
           >
-            <Plus size={14} /> Create
+            <Plus size={12} /> Create Quiz
           </button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 gap-2">
         {quizzes.map(quiz => {
-          const result = userResults[quiz.id];
+          const submission = userSubmissions[quiz.id];
           return (
             <div 
               key={quiz.id}
-              className="flex items-center justify-between p-4 bg-brand-bg border border-brand-border rounded-2xl group hover:border-brand-primary transition-all"
+              className="flex items-center justify-between p-3 bg-white border border-brand-border/40 rounded-xl hover:border-brand-primary/20 transition-all shadow-sm"
             >
-              <button 
-                onClick={() => setActiveQuiz(quiz)}
-                className="flex-1 flex items-center gap-3 text-left outline-none"
-              >
-                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-brand-border text-brand-primary shadow-sm group-hover:scale-110 transition-transform">
-                  <BookOpen size={18} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-[12px] font-bold text-brand-ink truncate">{quiz.title}</h4>
+                  {submission && (
+                    <span className="px-1.5 py-0.5 bg-green-50 text-green-600 rounded-md text-[9px] font-bold uppercase tracking-tight border border-green-100">
+                      Score: {submission.score}/{submission.totalQuestions}
+                    </span>
+                  )}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-black text-brand-ink truncate">{quiz.title}</h4>
-                    {result && (
-                      <span className="px-2 py-0.5 bg-green-100 text-green-600 rounded text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
-                        <CheckCircle2 size={10} /> {result.score}/{result.totalQuestions}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[10px] font-bold text-brand-secondary uppercase tracking-wider">
-                    {quiz.questions.length} Questions • {quiz.createdAt ? formatDistanceToNow(quiz.createdAt.toDate(), { addSuffix: true }) : 'Just now'}
-                  </p>
-                </div>
-                <ChevronRight size={16} className="ml-2 text-brand-border group-hover:text-brand-primary transition-colors shrink-0" />
-              </button>
+                <p className="text-[9px] font-medium text-brand-secondary/60 uppercase tracking-tight mt-0.5">
+                  {quiz.questions.length} Items • {quiz.createdAt ? formatDistanceToNow(quiz.createdAt.toDate(), { addSuffix: true }) : 'Just now'}
+                </p>
+              </div>
               
-              <div className="flex items-center gap-1 ml-2 shrink-0">
-                {isTeacher && (
+              <div className="flex items-center gap-2 ml-3">
+                {isTeacher ? (
                   <>
                     <button 
                       onClick={() => setViewResultsQuizId(quiz.id)}
-                      className="p-2 text-brand-secondary hover:text-brand-primary hover:bg-brand-primary/5 rounded-lg transition-all"
-                      title="View Results"
+                      className="h-[28px] px-3 border border-brand-border/30 rounded-lg text-[9px] font-bold uppercase hover:bg-brand-bg transition-colors"
                     >
-                      <BarChart3 size={18} />
+                      Results
                     </button>
                     <button 
                       onClick={() => handleDelete(quiz.id)}
-                      className="p-2 text-brand-secondary hover:text-red-500 hover:bg-red-50/50 rounded-lg transition-all"
-                      title="Delete Quiz"
+                      className="p-1.5 text-brand-secondary/40 hover:text-red-500 transition-colors"
+                      title="Delete"
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={14} />
                     </button>
                   </>
+                ) : (
+                  submission ? (
+                    <div className="px-3 h-[28px] flex items-center bg-brand-bg text-brand-secondary/60 rounded-lg text-[9px] font-bold uppercase tracking-tight border border-brand-border/20">
+                      Submitted
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setActiveQuiz(quiz)}
+                      className="h-[28px] px-4 bg-brand-ink text-white rounded-lg text-[9px] font-bold uppercase tracking-wider hover:brightness-125 transition-all shadow-sm flex items-center gap-1.5"
+                    >
+                      Start <Send size={10} />
+                    </button>
+                  )
                 )}
               </div>
             </div>
           );
         })}
         {quizzes.length === 0 && (
-          <div className="py-12 text-center bg-brand-bg rounded-2xl border-2 border-dashed border-brand-border">
-            <Brain size={32} className="mx-auto text-brand-border mb-3" />
-            <p className="text-[10px] font-bold text-brand-secondary uppercase tracking-widest leading-relaxed"> No quizzes available yet.<br/>Teachers can create one to start testing!</p>
+          <div className="py-8 px-4 text-center bg-brand-surface rounded-xl border border-brand-border/40 border-dashed">
+            <Brain size={24} className="mx-auto text-brand-secondary/20 mb-2" />
+            <p className="text-[10px] font-bold text-brand-secondary/60 uppercase tracking-widest">
+              No assignments found for this grade level.
+            </p>
           </div>
         )}
       </div>
@@ -142,7 +147,8 @@ export default function QuizSection({ classId, isTeacher }: QuizSectionProps) {
       <AnimatePresence>
         {showCreator && (
           <QuizCreator 
-            classId={classId} 
+            subject={subject}
+            gradeLevel={gradeLevel}
             onClose={() => setShowCreator(false)} 
           />
         )}
@@ -163,19 +169,20 @@ export default function QuizSection({ classId, isTeacher }: QuizSectionProps) {
   );
 }
 
-function QuizCreator({ classId, onClose }: { classId: string, onClose: () => void }) {
+function QuizCreator({ subject, gradeLevel, onClose }: { subject: string, gradeLevel: number, onClose: () => void }) {
   const { user, profile } = useAuth();
   const [title, setTitle] = useState('');
-  const [questions, setQuestions] = useState<QuizQuestion[]>([
+  const [questions, setQuestions] = useState<any[]>([
     { question: '', options: ['', '', '', ''], correctAnswer: 0 }
   ]);
   const [isSaving, setIsSaving] = useState(false);
 
   const addQuestion = () => {
+    if (questions.length >= 15) return;
     setQuestions([...questions, { question: '', options: ['', '', '', ''], correctAnswer: 0 }]);
   };
 
-  const updateQuestion = (index: number, field: keyof QuizQuestion, value: any) => {
+  const updateQuestion = (index: number, field: string, value: any) => {
     const newQuestions = [...questions];
     newQuestions[index] = { ...newQuestions[index], [field]: value };
     setQuestions(newQuestions);
@@ -191,31 +198,31 @@ function QuizCreator({ classId, onClose }: { classId: string, onClose: () => voi
     if (!title.trim() || !user) return;
     setIsSaving(true);
     try {
-      const quizDoc = await addDoc(collection(db, 'quizzes'), {
-        classId,
+      // 1. Separate answers from questions for security
+      const cleanQuestions = questions.map(q => ({
+        question: q.question,
+        options: q.options
+      }));
+      const answers = questions.map(q => q.correctAnswer);
+
+      // 2. Create the quiz doc (no answers)
+      const quizRef = await addDoc(collection(db, 'quizzes'), {
         title,
-        questions,
+        questions: cleanQuestions,
+        subject: subject.toLowerCase(),
+        gradeLevel,
         teacherId: user.uid,
         createdAt: serverTimestamp()
       });
 
-      // Notify students
-      const classSnap = await getDoc(doc(db, 'classes', classId));
-      if (classSnap.exists()) {
-        const classData = classSnap.data();
-        const studentIds = classData.studentIds || [];
-        for (const sid of studentIds) {
-          await createNotification({
-            recipientId: sid,
-            senderId: user.uid,
-            senderName: profile?.displayName || 'Teacher',
-            type: 'quiz',
-            text: `New quiz available in ${classData.name}: ${title}`,
-            link: '/classes'
-          });
-        }
-      }
+      // 3. Create the secret key doc
+      await setDoc(doc(db, 'quizKeys', quizRef.id), {
+        quizId: quizRef.id,
+        answers: answers
+      });
 
+      // 4. Notifications (Optional: finding students in this grade level)
+      // For now, let's just close
       onClose();
     } catch (error) {
       console.error("Quiz creation failed", error);
@@ -231,62 +238,62 @@ function QuizCreator({ classId, onClose }: { classId: string, onClose: () => voi
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[70] flex items-center justify-center p-4"
     >
-      <div className="absolute inset-0 bg-brand-ink/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-brand-ink/60 transition-all" onClick={onClose} />
       <motion.div 
         initial={{ y: 20, scale: 0.95 }}
         animate={{ y: 0, scale: 1 }}
-        className="relative bg-brand-surface w-full max-w-lg max-h-[90vh] overflow-hidden rounded-[32px] shadow-2xl flex flex-col border-2 border-brand-border"
+        className="relative bg-white w-full max-w-lg max-h-[90vh] overflow-hidden rounded-2xl shadow-huge border border-brand-border/40 flex flex-col"
       >
-        <div className="p-6 border-b border-brand-border flex items-center justify-between bg-brand-bg">
-          <h3 className="text-xl font-black tracking-tight">Create Quiz</h3>
-          <button onClick={onClose} className="p-2 hover:bg-white rounded-xl transition-all"><X size={20} /></button>
+        <div className="p-4 border-b border-brand-border/20 flex items-center justify-between">
+          <h3 className="text-[12px] font-bold uppercase tracking-tight text-brand-ink">New {subject} Quiz</h3>
+          <button onClick={onClose} className="p-1.5 hover:bg-brand-bg rounded-lg transition-all text-brand-secondary"><X size={16} /></button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-brand-secondary">Quiz Title</label>
+        <div className="flex-1 overflow-y-auto p-4 space-y-5 no-scrollbar">
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-bold uppercase tracking-widest text-brand-secondary/60">Quiz Title</label>
             <input 
               type="text" 
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Midterm Physics Assessment"
-              className="w-full bg-brand-bg border border-brand-border rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-brand-primary font-bold"
+              placeholder="e.g. Weekly Math Quiz"
+              className="w-full bg-brand-bg border border-brand-border/20 rounded-xl px-3 py-2.5 focus:outline-none focus:border-brand-primary/30 text-[12px] font-bold text-brand-ink"
             />
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-4">
             {questions.map((q, qIndex) => (
-              <div key={qIndex} className="p-4 bg-brand-bg border border-brand-border rounded-2xl relative space-y-4 shadow-inner">
+              <div key={qIndex} className="p-4 bg-brand-bg/30 border border-brand-border/20 rounded-xl space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black bg-brand-primary text-white px-3 py-1 rounded-lg uppercase tracking-widest">Question {qIndex + 1}</span>
+                  <span className="text-[9px] font-bold text-brand-primary uppercase tracking-widest">Question {qIndex + 1}</span>
                   {questions.length > 1 && (
-                    <button onClick={() => setQuestions(questions.filter((_, i) => i !== qIndex))} className="text-brand-secondary hover:text-red-500"><X size={16} /></button>
+                    <button onClick={() => setQuestions(questions.filter((_, i) => i !== qIndex))} className="text-brand-secondary/40 hover:text-red-500"><X size={14} /></button>
                   )}
                 </div>
                 <textarea 
                   value={q.question}
                   onChange={(e) => updateQuestion(qIndex, 'question', e.target.value)}
                   placeholder="Type your question..."
-                  className="w-full bg-white border border-brand-border rounded-xl px-4 py-3 text-sm focus:outline-none resize-none"
+                  className="w-full bg-white border border-brand-border/20 rounded-lg px-3 py-2 text-[12px] font-medium focus:outline-none focus:border-brand-primary/30 resize-none h-[60px]"
                 />
-                <div className="grid grid-cols-1 gap-2">
-                  {q.options.map((opt, oIndex) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {q.options.map((opt: string, oIndex: number) => (
                     <div key={oIndex} className="flex items-center gap-2">
                       <button 
                         onClick={() => updateQuestion(qIndex, 'correctAnswer', oIndex)}
                         className={cn(
-                          "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
-                          q.correctAnswer === oIndex ? "bg-green-500 border-green-500 text-white" : "border-brand-border"
+                          "w-5 h-5 rounded-full border flex items-center justify-center transition-all shrink-0",
+                          q.correctAnswer === oIndex ? "bg-green-500 border-green-500 text-white" : "border-brand-border/40 hover:border-green-500/50"
                         )}
                       >
-                        {q.correctAnswer === oIndex && <CheckCircle2 size={14} />}
+                        {q.correctAnswer === oIndex && <CheckCircle2 size={12} />}
                       </button>
                       <input 
                         type="text"
                         value={opt}
                         onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
                         placeholder={`Option ${oIndex + 1}`}
-                        className="flex-1 bg-white border border-brand-border rounded-lg px-3 py-2 text-xs focus:outline-none"
+                        className="w-full bg-white border border-brand-border/20 rounded-lg px-2.5 py-1.5 text-[11px] font-medium focus:outline-none"
                       />
                     </div>
                   ))}
@@ -295,21 +302,23 @@ function QuizCreator({ classId, onClose }: { classId: string, onClose: () => voi
             ))}
           </div>
 
-          <button 
-            onClick={addQuestion}
-            className="w-full py-4 border-2 border-dashed border-brand-border rounded-2xl text-brand-secondary font-black text-xs uppercase tracking-widest hover:border-brand-primary hover:text-brand-primary transition-all flex items-center justify-center gap-2"
-          >
-            <Plus size={16} /> Add Question
-          </button>
+          {questions.length < 15 && (
+            <button 
+              onClick={addQuestion}
+              className="w-full py-3 border border-dashed border-brand-border/40 rounded-xl text-brand-secondary/60 font-bold text-[10px] uppercase tracking-wider hover:bg-brand-bg transition-all flex items-center justify-center gap-2"
+            >
+              <Plus size={14} /> Add Question
+            </button>
+          )}
         </div>
 
-        <div className="p-6 border-t border-brand-border bg-brand-bg">
+        <div className="p-4 border-t border-brand-border/20">
           <button 
             onClick={handleSave}
-            disabled={isSaving || !title.trim()}
-            className="w-full bg-brand-primary text-white font-black py-4 rounded-xl flex items-center justify-center gap-2 hover:scale-[0.98] transition-all disabled:opacity-50 shadow-lg"
+            disabled={isSaving || !title.trim() || questions.length === 0}
+            className="w-full bg-brand-primary text-white font-bold h-[40px] rounded-xl flex items-center justify-center gap-2 hover:brightness-110 shadow-sm disabled:opacity-50 text-[11px] uppercase tracking-wider"
           >
-            <Send size={18} />
+            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
             Publish Quiz
           </button>
         </div>
@@ -327,41 +336,40 @@ function QuizViewer({ quiz, onClose }: { quiz: Quiz, onClose: () => void }) {
   const [isSaving, setIsSaving] = useState(false);
 
   const handleFinish = async () => {
-    let finalScore = 0;
-    quiz.questions.forEach((q, idx) => {
-      if (answers[idx] === q.correctAnswer) finalScore++;
-    });
-    setScore(finalScore);
-    setShowResult(true);
+    setIsSaving(true);
+    try {
+      // 1. Fetch secret key for calculation
+      const keySnap = await getDoc(doc(db, 'quizKeys', quiz.id));
+      if (!keySnap.exists()) throw new Error("Quiz key missing");
+      
+      const sessionKey = keySnap.data().answers;
+      let finalScore = 0;
+      quiz.questions.forEach((_q, idx) => {
+        if (answers[idx] === sessionKey[idx]) finalScore++;
+      });
 
-    if (user && profile) {
-      setIsSaving(true);
-      try {
-        await addDoc(collection(db, 'quizResults'), {
+      // 2. Save submission
+      if (user && profile) {
+        await addDoc(collection(db, 'submissions'), {
           quizId: quiz.id,
           studentId: user.uid,
           studentName: profile.displayName || user.email,
+          quizTitle: quiz.title,
           score: finalScore,
           totalQuestions: quiz.questions.length,
-          teacherId: quiz.teacherId,
-          classId: quiz.classId,
-          createdAt: serverTimestamp()
+          subject: quiz.subject,
+          gradeLevel: quiz.gradeLevel,
+          timestamp: serverTimestamp()
         });
 
-        // Notify teacher
-        await createNotification({
-          recipientId: quiz.teacherId,
-          senderId: user.uid,
-          senderName: profile.displayName || 'A student',
-          type: 'quiz',
-          text: `${profile.displayName || 'A student'} completed the quiz "${quiz.title}" with a score of ${finalScore}/${quiz.questions.length}`,
-          link: '/classes'
-        });
-      } catch (error) {
-        console.error("Failed to save quiz result:", error);
-      } finally {
-        setIsSaving(false);
+        // 3. Score summary UI
+        setScore(finalScore);
+        setShowResult(true);
       }
+    } catch (error) {
+      console.error("Quiz submission failed", error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -371,28 +379,28 @@ function QuizViewer({ quiz, onClose }: { quiz: Quiz, onClose: () => void }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+        className="fixed inset-0 z-[70] flex items-center justify-center p-4 text-left"
       >
-        <div className="absolute inset-0 bg-brand-ink/80" onClick={onClose} />
+        <div className="absolute inset-0 bg-brand-ink/80 backdrop-blur-sm" onClick={onClose} />
         <motion.div 
           initial={{ y: 20, scale: 0.95 }}
           animate={{ y: 0, scale: 1 }}
-          className="relative bg-brand-surface w-full max-w-sm rounded-[32px] p-8 text-center border-2 border-brand-border shadow-2xl"
+          className="relative bg-white w-full max-w-sm rounded-2xl p-6 text-center border border-brand-border/40 shadow-huge"
         >
-          <div className="w-20 h-20 bg-brand-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 size={40} className="text-brand-primary" />
+          <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-100">
+            <CheckCircle2 size={24} className="text-green-600" />
           </div>
-          <h3 className="text-2xl font-black mb-2 tracking-tight">Quiz Completed!</h3>
-          <p className="text-brand-secondary font-medium mb-6">Excellent work! You've finished the assessment.</p>
-          <div className="bg-brand-bg border border-brand-border rounded-2xl p-6 mb-8">
-            <p className="text-[10px] font-black uppercase text-brand-secondary tracking-widest mb-1">Your Score</p>
-            <p className="text-4xl font-black text-brand-ink">{score} / {quiz.questions.length}</p>
+          <h3 className="text-[14px] font-bold mb-1 tracking-tight">Quiz Submitted!</h3>
+          <p className="text-[11px] font-medium text-brand-secondary mb-5">Your score has been recorded securely.</p>
+          <div className="bg-brand-bg/50 border border-brand-border/20 rounded-xl p-5 mb-6">
+            <p className="text-[9px] font-bold uppercase text-brand-secondary/60 tracking-widest mb-1">Final Score</p>
+            <p className="text-3xl font-black text-brand-ink">{score} / {quiz.questions.length}</p>
           </div>
           <button 
             onClick={onClose}
-            className="w-full bg-brand-ink text-white font-black py-4 rounded-xl hover:scale-[0.98] transition-all"
+            className="w-full bg-brand-ink text-white font-bold h-[40px] rounded-xl hover:brightness-125 transition-all text-[11px] uppercase tracking-wider"
           >
-            Back to Class
+            Close Results
           </button>
         </motion.div>
       </motion.div>
@@ -406,24 +414,26 @@ function QuizViewer({ quiz, onClose }: { quiz: Quiz, onClose: () => void }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4 text-left"
     >
       <div className="absolute inset-0 bg-brand-ink/80 backdrop-blur-sm" onClick={onClose} />
       <motion.div 
         initial={{ y: 20, scale: 0.95 }}
         animate={{ y: 0, scale: 1 }}
-        className="relative bg-brand-surface w-full max-w-sm rounded-[32px] overflow-hidden border-2 border-brand-border shadow-2xl"
+        className="relative bg-white w-full max-w-md rounded-2xl overflow-hidden border border-brand-border/40 shadow-huge"
       >
-        <div className="p-6 border-b border-brand-border bg-brand-bg flex items-center justify-between">
-          <div className="flex flex-col">
-            <h4 className="text-sm font-black truncate max-w-[200px]">{quiz.title}</h4>
-            <span className="text-[10px] font-bold text-brand-secondary uppercase tracking-widest mt-0.5">Question {currentStep + 1} of {quiz.questions.length}</span>
+        <div className="p-4 border-b border-brand-border/20 bg-brand-bg/50 flex items-center justify-between">
+          <div className="min-w-0">
+            <h4 className="text-[11px] font-bold text-brand-ink truncate uppercase tracking-tight">{quiz.title}</h4>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[9px] font-bold text-brand-secondary/60">Q{currentStep + 1} OF {quiz.questions.length}</span>
+            </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white rounded-xl transition-all"><X size={20} /></button>
+          <button onClick={onClose} className="p-1 hover:bg-brand-border/20 rounded-md transition-all text-brand-secondary"><X size={16} /></button>
         </div>
 
-        <div className="p-6 space-y-6">
-          <div className="w-full bg-brand-bg rounded-2xl h-2 overflow-hidden border border-brand-border">
+        <div className="p-5 space-y-5">
+          <div className="w-full bg-brand-bg rounded-full h-1.5 overflow-hidden border border-brand-border/10">
             <motion.div 
               className="h-full bg-brand-primary"
               initial={{ width: 0 }}
@@ -431,33 +441,41 @@ function QuizViewer({ quiz, onClose }: { quiz: Quiz, onClose: () => void }) {
             />
           </div>
 
-          <h3 className="text-lg font-black text-brand-ink leading-tight min-h-[60px]">
+          <h3 className="text-[12px] font-bold text-brand-ink leading-relaxed">
             {q.question}
           </h3>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {q.options.map((opt, idx) => (
               <button 
                 key={idx}
                 onClick={() => setAnswers({ ...answers, [currentStep]: idx })}
                 className={cn(
-                  "w-full p-4 rounded-2xl text-left text-sm font-bold border-2 transition-all active:scale-[0.98]",
+                  "w-full px-4 py-3 rounded-xl text-left text-[11px] font-medium border transition-all active:scale-[0.99]",
                   answers[currentStep] === idx 
-                    ? "bg-brand-primary text-white border-brand-primary shadow-lg ring-4 ring-brand-primary/10" 
-                    : "bg-brand-bg border-brand-border text-brand-ink hover:border-brand-primary/50"
+                    ? "bg-brand-primary/5 text-brand-primary border-brand-primary/40 shadow-sm" 
+                    : "bg-brand-bg/30 border-brand-border/10 text-brand-secondary hover:border-brand-primary/20"
                 )}
               >
-                {opt}
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "w-5 h-5 rounded-full border flex items-center justify-center text-[9px] font-bold transition-all",
+                    answers[currentStep] === idx ? "bg-brand-primary text-white border-brand-primary" : "border-brand-border/40 text-brand-secondary/40"
+                  )}>
+                    {String.fromCharCode(65 + idx)}
+                  </div>
+                  {opt}
+                </div>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="p-6 border-t border-brand-border bg-brand-bg flex gap-3">
+        <div className="p-4 border-t border-brand-border/20 bg-brand-bg/30 flex gap-2">
           <button 
             disabled={currentStep === 0}
             onClick={() => setCurrentStep(prev => prev - 1)}
-            className="flex-1 py-3 border border-brand-border rounded-xl text-xs font-black uppercase tracking-widest disabled:opacity-30 transition-all hover:bg-white"
+            className="flex-1 h-[36px] border border-brand-border/30 rounded-lg text-[9px] font-bold uppercase tracking-wider disabled:opacity-30 transition-all hover:bg-white"
           >
             Prev
           </button>
@@ -465,15 +483,16 @@ function QuizViewer({ quiz, onClose }: { quiz: Quiz, onClose: () => void }) {
             <button 
               disabled={answers[currentStep] === undefined || isSaving}
               onClick={handleFinish}
-              className="flex-[2] py-3 bg-brand-primary text-white rounded-xl text-xs font-black uppercase tracking-widest disabled:opacity-50 transition-all shadow-md hover:scale-[0.98]"
+              className="flex-[2] h-[36px] bg-brand-primary text-white rounded-lg text-[9px] font-bold uppercase tracking-wider disabled:opacity-50 transition-all shadow-sm flex items-center justify-center gap-1.5"
             >
-              {isSaving ? 'Saving...' : 'Finish Quiz'}
+              {isSaving ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+              Finish Quiz
             </button>
           ) : (
             <button 
               disabled={answers[currentStep] === undefined}
               onClick={() => setCurrentStep(prev => prev + 1)}
-              className="flex-[2] py-3 bg-brand-ink text-white rounded-xl text-xs font-black uppercase tracking-widest disabled:opacity-50 transition-all shadow-md hover:scale-[0.98]"
+              className="flex-[2] h-[36px] bg-brand-ink text-white rounded-lg text-[9px] font-bold uppercase tracking-wider disabled:opacity-50 transition-all shadow-sm"
             >
               Next
             </button>
@@ -485,18 +504,18 @@ function QuizViewer({ quiz, onClose }: { quiz: Quiz, onClose: () => void }) {
 }
 
 function ResultsModal({ quizId, onClose }: { quizId: string, onClose: () => void }) {
-  const [results, setResults] = useState<QuizResult[]>([]);
+  const [results, setResults] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const q = query(
-      collection(db, 'quizResults'),
+      collection(db, 'submissions'),
       where('quizId', '==', quizId)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const res: QuizResult[] = [];
-      snapshot.forEach(doc => res.push({ id: doc.id, ...doc.data() } as QuizResult));
-      setResults(res.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
+      const res: Submission[] = [];
+      snapshot.forEach(doc => res.push({ id: doc.id, ...doc.data() } as Submission));
+      setResults(res.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0)));
       setLoading(false);
     });
     return () => unsubscribe();
@@ -507,52 +526,49 @@ function ResultsModal({ quizId, onClose }: { quizId: string, onClose: () => void
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[75] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[75] flex items-center justify-center p-4 text-left"
     >
       <div className="absolute inset-0 bg-brand-ink/80 backdrop-blur-sm" onClick={onClose} />
       <motion.div 
         initial={{ y: 20, scale: 0.95 }}
         animate={{ y: 0, scale: 1 }}
-        className="relative bg-brand-surface w-full max-w-lg max-h-[80vh] overflow-hidden rounded-[32px] border-2 border-brand-border shadow-2xl flex flex-col"
+        className="relative bg-white w-full max-w-md max-h-[80vh] overflow-hidden rounded-2xl border border-brand-border/40 shadow-huge flex flex-col"
       >
-        <div className="p-6 border-b border-brand-border flex items-center justify-between bg-brand-bg">
+        <div className="p-4 border-b border-brand-border/20 flex items-center justify-between bg-brand-bg/50">
           <div className="flex items-center gap-2">
-            <BarChart3 size={20} className="text-brand-primary" />
-            <h3 className="text-lg font-black tracking-tight">Quiz Results</h3>
+            <BarChart3 size={16} className="text-brand-primary" />
+            <h3 className="text-[12px] font-bold tracking-tight uppercase">Quiz Gradebook</h3>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white rounded-xl transition-all"><X size={20} /></button>
+          <button onClick={onClose} className="p-1 hover:bg-brand-border/20 rounded-md transition-all text-brand-secondary"><X size={16} /></button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 no-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 no-scrollbar space-y-2">
           {loading ? (
-            <div className="py-12 text-center text-brand-secondary font-bold text-xs uppercase tracking-widest">Loading results...</div>
+            <div className="py-8 text-center text-[10px] font-bold text-brand-secondary/40 uppercase tracking-widest">Fetching scores...</div>
           ) : results.length === 0 ? (
             <div className="py-12 text-center">
-              <Users size={32} className="mx-auto text-brand-border mb-3" />
-              <p className="text-[10px] font-black uppercase text-brand-secondary tracking-widest">No students have taken this quiz yet</p>
+              <Users size={24} className="mx-auto text-brand-secondary/20 mb-2" />
+              <p className="text-[9px] font-bold uppercase text-brand-secondary/60 tracking-widest">No submissions yet</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {results.map(res => (
-                <div key={res.id} className="flex items-center justify-between p-4 bg-brand-bg border border-brand-border rounded-2xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center border border-brand-border font-black text-brand-primary text-xs uppercase">
-                      {res.studentName?.charAt(0) || '?'}
-                    </div>
-                    <div>
-                      <p className="text-sm font-black text-brand-ink">{res.studentName}</p>
-                      <p className="text-[10px] font-bold text-brand-secondary uppercase tracking-widest">
-                        {res.createdAt ? formatDistanceToNow(res.createdAt.toDate(), { addSuffix: true }) : 'Recently'}
-                      </p>
-                    </div>
+            results.map(res => (
+              <div key={res.id} className="flex items-center justify-between p-3 bg-brand-bg/30 border border-brand-border/10 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-brand-border/20 font-bold text-brand-primary text-[10px] uppercase">
+                    {res.studentName?.charAt(0) || '?'}
                   </div>
-                  <div className="text-right">
-                    <p className="text-lg font-black text-brand-ink">{res.score} / {res.totalQuestions}</p>
-                    <p className="text-[10px] font-bold text-brand-secondary uppercase tracking-widest">Score</p>
+                  <div>
+                    <p className="text-[11px] font-bold text-brand-ink">{res.studentName}</p>
+                    <p className="text-[9px] font-medium text-brand-secondary/60 uppercase tracking-tight">
+                      {res.timestamp ? formatDistanceToNow(res.timestamp.toDate(), { addSuffix: true }) : 'Recently'}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="text-right">
+                  <p className="text-[14px] font-black text-brand-ink">{res.score} <span className="text-[9px] font-bold text-brand-secondary/40">/ {res.totalQuestions}</span></p>
+                </div>
+              </div>
+            ))
           )}
         </div>
       </motion.div>

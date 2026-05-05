@@ -87,32 +87,45 @@
     },
     "Quiz": {
       "title": "Quiz",
-      "description": "An in-app quiz created by a teacher for a class.",
+      "description": "An in-app quiz created by a teacher for a class or subject.",
       "type": "object",
       "properties": {
         "classId": { "type": "string" },
         "title": { "type": "string" },
         "questions": { "type": "array" },
         "teacherId": { "type": "string" },
+        "subject": { "type": "string" },
+        "gradeLevel": { "type": "integer" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["classId", "title", "questions", "teacherId"]
+      "required": ["title", "questions", "teacherId"]
     },
-    "QuizResult": {
-      "title": "Quiz Result",
+    "Submissions": {
+      "title": "Quiz Submission",
       "description": "The result of a quiz taken by a student.",
       "type": "object",
       "properties": {
         "quizId": { "type": "string" },
         "studentId": { "type": "string" },
         "studentName": { "type": "string" },
+        "quizTitle": { "type": "string" },
         "score": { "type": "integer" },
         "totalQuestions": { "type": "integer" },
-        "teacherId": { "type": "string" },
-        "classId": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "subject": { "type": "string" },
+        "gradeLevel": { "type": "integer" },
+        "timestamp": { "type": "string", "format": "date-time" }
       },
-      "required": ["quizId", "studentId", "score", "totalQuestions", "teacherId", "classId"]
+      "required": ["quizId", "studentId", "score", "totalQuestions", "timestamp"]
+    },
+    "QuizKey": {
+      "title": "Quiz Answer Key",
+      "description": "The correct answers for a quiz, stored separately for security.",
+      "type": "object",
+      "properties": {
+        "quizId": { "type": "string" },
+        "answers": { "type": "array", "items": { "type": "integer" } }
+      },
+      "required": ["quizId", "answers"]
     },
     "Friendship": {
       "title": "Friendship",
@@ -165,8 +178,9 @@
     "/posts/{postId}/comments/{commentId}": { "schema": "Comment", "description": "Comments on posts." },
     "/messages/{messageId}": { "schema": "Message", "description": "Direct and group messages." },
     "/presence/{userId}": { "schema": "Presence", "description": "Online presence tracking." },
-    "/quizzes/{quizId}": { "schema": "Quiz", "description": "Class quizzes." },
-    "/quizResults/{resultId}": { "schema": "QuizResult", "description": "Student quiz results." },
+    "/quizzes/{quizId}": { "schema": "Quiz", "description": "Class and subject quizzes (no answers)." },
+    "/quizKeys/{quizId}": { "schema": "QuizKey", "description": "Answer keys for quizzes (secure)." },
+    "/submissions/{submissionId}": { "schema": "Submissions", "description": "Student quiz results." },
     "/friendships/{friendshipId}": { "schema": "Friendship", "description": "User friendship statuses." },
     "/events/{eventId}": { "schema": "Event", "description": "Campus-wide events." },
     "/resources/{resourceId}": { "schema": "Resource", "description": "Learning materials." }

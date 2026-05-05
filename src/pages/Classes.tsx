@@ -319,14 +319,11 @@ export default function Classes({ onViewChange }: { onViewChange: (view: PageVie
                   </div>
                 </div>
 
-                <div className="py-12 px-6 bg-brand-surface border-2 border-dashed border-brand-border rounded-xl text-center">
-                  <div className="w-10 h-10 bg-brand-bg rounded-full flex items-center justify-center mx-auto mb-3 text-brand-secondary">
-                    <Check size={20} />
-                  </div>
-                  <h4 className="text-[12px] font-bold text-brand-ink mb-1">No Assignments Yet</h4>
-                  <p className="text-[11px] font-medium text-brand-secondary max-w-[220px] mx-auto leading-relaxed">
-                    Check back soon for new tasks in {selectedSubject.name} Grade {selectedGrade}.
-                  </p>
+                <div className="space-y-4">
+                  <QuizSection 
+                    subject={selectedSubject.id} 
+                    gradeLevel={selectedGrade} 
+                  />
                 </div>
               </div>
             )}
@@ -426,7 +423,11 @@ function ClassItem({ c, isJoined, isPending, onJoin }: { c: Class, isJoined?: bo
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden mt-3 pt-3 border-t border-brand-border/10"
           >
-            <QuizSection classId={c.id} isTeacher={profile?.role === 'teacher'} />
+            <div className="py-6 text-center bg-brand-bg rounded-xl border border-dashed border-brand-border/20">
+               <p className="text-[10px] font-bold text-brand-secondary/60 uppercase tracking-widest">
+                 View assignments in the library tab
+               </p>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
