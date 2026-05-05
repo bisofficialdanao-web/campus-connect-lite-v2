@@ -676,32 +676,62 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
         )}
 
         <div className="flex items-center justify-start gap-[12px] pt-3 border-t border-brand-border/20">
-          <button 
-            onClick={() => setShowReactionPicker(!showReactionPicker)}
-            className={cn(
-              "flex items-center gap-1.5 h-[32px] px-3 rounded-lg transition-all font-semibold text-[11px] uppercase tracking-wide border",
-              Object.values(post.reactions || {}).some(uids => uids.includes(user?.uid || ''))
-                ? "bg-brand-primary/5 text-brand-primary border-brand-primary/20" 
-                : "bg-brand-bg text-brand-secondary/60 border-brand-border/30 hover:bg-white hover:text-brand-primary hover:border-brand-primary/20"
-            )}
-          >
-            <Heart 
-              size={16} 
-              className={cn(Object.values(post.reactions || {}).some(uids => uids.includes(user?.uid || '')) && "fill-current")} 
-            />
-            <span>React</span>
-          </button>
+          <div className="relative">
+            <button 
+              onClick={() => setShowReactionPicker(!showReactionPicker)}
+              className={cn(
+                "flex items-center gap-1.5 h-[32px] px-3 rounded-lg transition-all font-semibold text-[9px] uppercase tracking-wide border",
+                Object.values(post.reactions || {}).some(uids => uids.includes(user?.uid || ''))
+                  ? "bg-brand-primary/5 text-brand-primary border-brand-primary/20" 
+                  : "bg-brand-bg text-brand-secondary/60 border-brand-border/30 hover:bg-white hover:text-brand-primary hover:border-brand-primary/20"
+              )}
+            >
+              <Heart 
+                size={9} 
+                className={cn(Object.values(post.reactions || {}).some(uids => uids.includes(user?.uid || '')) && "fill-current")} 
+              />
+              <span>React</span>
+            </button>
+
+            <AnimatePresence>
+              {showReactionPicker && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute left-0 bottom-full mb-2 bg-white border border-brand-border/40 shadow-huge rounded-xl p-1.5 flex items-center gap-0.5 z-40"
+                >
+                  {REACTION_TYPES.map(rt => {
+                    const hasSelected = post.reactions?.[rt.key]?.includes(user?.uid || '');
+                    return (
+                      <button 
+                        key={rt.key}
+                        onClick={() => handleReact(rt.key)}
+                        className={cn(
+                          "w-7 h-7 flex items-center justify-center rounded-lg transition-all text-sm hover:scale-110",
+                          hasSelected ? "bg-brand-primary/10" : "hover:bg-brand-bg"
+                        )}
+                        title={rt.label}
+                      >
+                        {rt.emoji}
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           
           <button 
             onClick={() => setShowComments(!showComments)}
             className={cn(
-              "flex items-center gap-1.5 h-[32px] px-3 rounded-lg transition-all font-semibold text-[11px] uppercase tracking-wide border",
+              "flex items-center gap-1.5 h-[32px] px-3 rounded-lg transition-all font-semibold text-[9px] uppercase tracking-wide border",
               showComments 
                 ? "bg-brand-ink text-white border-brand-ink" 
                 : "bg-brand-bg text-brand-secondary/60 border-brand-border/30 hover:bg-white hover:text-brand-ink hover:border-brand-ink/20"
             )}
           >
-            <MessageSquare size={16} />
+            <MessageSquare size={9} />
             <span>{post.commentCount || 0}</span>
           </button>
 
@@ -711,9 +741,9 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
                 navigator.share({ title: 'Campus Post', text: post.content, url: window.location.href }).catch(() => {});
               }
             }}
-            className="flex items-center gap-1.5 h-[32px] px-3 rounded-lg transition-all font-semibold text-[11px] uppercase tracking-wide border bg-brand-bg text-brand-secondary/60 border-brand-border/30 hover:bg-white hover:text-brand-ink hover:border-brand-ink/20"
+            className="flex items-center gap-1.5 h-[32px] px-3 rounded-lg transition-all font-semibold text-[9px] uppercase tracking-wide border bg-brand-bg text-brand-secondary/60 border-brand-border/30 hover:bg-white hover:text-brand-ink hover:border-brand-ink/20"
           >
-            <Share2 size={16} />
+            <Share2 size={9} />
             <span>Share</span>
           </button>
         </div>
