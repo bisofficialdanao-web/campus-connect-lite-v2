@@ -11,6 +11,7 @@ import { GraduationCap, BookOpen, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
+// CampusConnect Lite - Rebuild Trigger
 function AppContent() {
   const { user, profile, loading, signIn, updateRole, activeDM } = useAuth();
   const [currentView, setCurrentView] = useState<PageView>('campus');

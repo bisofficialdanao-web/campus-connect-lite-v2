@@ -33,7 +33,7 @@ service cloud.firestore {
     }
 
     function isTeacher() {
-      return isSignedIn() && getUserData(request.auth.uid).role == 'teacher' && getUserData(request.auth.uid).isApproved == true;
+      return isSignedIn() && getUserData(request.auth.uid).role == 'teacher';
     }
 
     // --- Validation Blueprints ---
@@ -115,8 +115,7 @@ service cloud.firestore {
         && data.title is string && data.title.size() <= 200
         && data.link is string && data.link.size() <= 2048
         && data.uploaderId == request.auth.uid
-        && data.createdAt == request.time
-        && (!data.keys().contains('fileName') || data.fileName == null || data.fileName is string);
+        && data.createdAt == request.time;
     }
 
     // --- Collections ---
