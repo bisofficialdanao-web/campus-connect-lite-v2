@@ -87,6 +87,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
     path
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
+  alert(`Database Error: ${errInfo.error} (${operationType} on ${path})`);
   throw new Error(JSON.stringify(errInfo));
 }
 
@@ -187,25 +188,32 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
 
     setIsPosting(true);
     const path = 'posts';
+    const postData = {
+      content: newPost,
+      imageUrl: uploadedImageUrl,
+      authorId: user.uid,
+      authorName: isAnonymous ? 'Anonymous Member' : (profile?.displayName || 'User'),
+      authorPhoto: isAnonymous ? null : (profile?.photoURL || null),
+      isAnonymous,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      reactions: { heart: [] },
+      commentCount: 0
+    };
+
+    console.log('Attempting to post:', postData);
+
     try {
-      await addDoc(collection(db, path), {
-        content: newPost,
-        imageUrl: uploadedImageUrl,
-        authorId: user.uid,
-        authorName: isAnonymous ? 'Anonymous Member' : (profile?.displayName || 'User'),
-        authorPhoto: isAnonymous ? null : (profile?.photoURL || null),
-        isAnonymous,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        reactions: { heart: [] },
-        commentCount: 0
-      });
+      await addDoc(collection(db, path), postData);
       setNewPost('');
       setSelectedImage(null);
       setImagePreview(null);
       setUploadedImageUrl(null);
       setIsAnonymous(false);
+      console.log('Post successful');
     } catch (error) {
+      console.error("Post failed", error);
+      alert('Post failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
       handleFirestoreError(error, OperationType.WRITE, path, auth);
     } finally {
       setIsPosting(false);
@@ -365,7 +373,7 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
               <motion.button 
                 whileTap={{ scale: 0.98 }}
                 type="submit"
-                disabled={(!newPost.trim() && !uploadedImageUrl) || isPosting || isUploading}
+                disabled={(!newPost.trim() && !uploadedImageUrl) || isPosting || isUploading || isCompressing}
                 className="bg-brand-primary text-white px-8 py-3 sm:py-2 rounded-full font-black text-[11px] uppercase tracking-widest hover:brightness-110 active:brightness-95 transition-all disabled:opacity-50 disabled:scale-100 shadow-neon flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 {isPosting ? <Loader2 size={16} className="animate-spin" /> : <>Post <Send size={14} /></>}
@@ -492,7 +500,7 @@ function ModuleModal({ onClose }: { onClose: () => void }) {
         fileUrl = await getDownloadURL(snapshot.ref);
       }
 
-      await addDoc(collection(db, 'posts'), {
+      const postData = {
         content: `📚 NEW MODULE: ${title}\n\n${description}`,
         fileUrl,
         isModule: true,
@@ -505,9 +513,15 @@ function ModuleModal({ onClose }: { onClose: () => void }) {
         updatedAt: serverTimestamp(),
         reactions: { heart: [] },
         commentCount: 0
-      });
+      };
+
+      console.log('Attempting to publish module post:', postData);
+      await addDoc(collection(db, 'posts'), postData);
+      console.log('Module post successful');
       onClose();
     } catch (error) {
+      console.error("Module post failed", error);
+      alert('Module publish failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
       handleFirestoreError(error, OperationType.WRITE, 'posts', auth);
       setIsSaving(false);
     }
@@ -1074,19 +1088,26 @@ function EventModal({ onClose }: { onClose: () => void }) {
     if (!title || !date || !time || !location || !user || isSaving) return;
 
     setIsSaving(true);
+    const eventData = {
+      title,
+      date,
+      time,
+      location,
+      description,
+      organizerId: user.uid,
+      organizerName: profile?.displayName || 'Teacher',
+      createdAt: serverTimestamp()
+    };
+
+    console.log('Attempting to schedule event:', eventData);
+
     try {
-      await addDoc(collection(db, 'events'), {
-        title,
-        date,
-        time,
-        location,
-        description,
-        organizerId: user.uid,
-        organizerName: profile?.displayName || 'Teacher',
-        createdAt: serverTimestamp()
-      });
+      await addDoc(collection(db, 'events'), eventData);
+      console.log('Event schedule successful');
       onClose();
     } catch (error) {
+      console.error("Event schedule failed", error);
+      alert('Event schedule failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
       handleFirestoreError(error, OperationType.WRITE, 'events', auth);
       setIsSaving(false);
     }
