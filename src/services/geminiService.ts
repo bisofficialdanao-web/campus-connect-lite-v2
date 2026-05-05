@@ -17,16 +17,20 @@ TECHNICAL REQUIREMENTS:
 - Use Markdown for visual hierarchy.
 - Maintain a sophisticated academic tone.`;
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export async function askGuide(question: string, history: { role: 'user' | 'model', parts: { text: string }[] }[] = []) {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.1-pro-preview",
       contents: [...history, { role: 'user', parts: [{ text: question }] }],
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         temperature: 0.7,
+        tools: [
+          { googleSearch: {} }
+        ],
+        toolConfig: { includeServerSideToolInvocations: true }
       }
     });
 

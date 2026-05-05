@@ -99,16 +99,7 @@ service cloud.firestore {
         && data.content is string && data.content.size() <= 20000
         && data.authorId == request.auth.uid
         && data.authorName is string
-        && data.reactions is map
-        && (data.commentCount is int || data.commentCount is float)
-        && data.createdAt == request.time
-        && data.updatedAt == request.time
-        // Optional fields - robust check
-        && (data.get('authorPhoto', null) == null || data.authorPhoto is string)
-        && (data.get('isAnonymous', false) is bool)
-        && (data.get('isModule', false) is bool)
-        && (data.get('fileUrl', null) == null || data.fileUrl is string)
-        && (data.get('moduleName', null) == null || data.moduleName is string);
+        && (data.commentCount is int || data.commentCount is float);
     }
 
     function isValidComment(data) {
