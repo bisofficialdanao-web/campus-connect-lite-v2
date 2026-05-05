@@ -38,23 +38,20 @@ function AppContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-brand-bg px-6">
         <div className="w-full max-w-sm flex flex-col items-center text-center">
-          <div className="w-24 h-24 bg-gradient-to-br from-green-600 to-yellow-500 rounded-[32px] flex items-center justify-center mb-8 shadow-2xl pulse-glow">
-            <GraduationCap size={48} className="text-white" />
+          <div className="w-20 h-20 bg-brand-primary/5 rounded-2xl flex items-center justify-center mb-6 shadow-soft">
+            <GraduationCap size={40} className="text-brand-primary" />
           </div>
-          <h1 className="text-3xl font-black mb-3 tracking-tighter">CampusConnect Lite</h1>
-          <p className="text-brand-secondary mb-10 font-medium leading-relaxed">
-            A lightweight educational platform for structured classrooms and peer communication.
+          <h1 className="text-2xl font-bold mb-2 tracking-tight">CampusConnect</h1>
+          <p className="text-[14px] text-brand-secondary mb-8 font-medium leading-relaxed">
+            Lightweight educational platform for structured classrooms and digital library.
           </p>
           <button 
             onClick={signIn}
-            className="w-full bg-brand-ink text-white font-bold py-4 rounded-2xl hover:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg"
+            className="w-full bg-brand-ink text-white font-semibold h-[48px] rounded-xl hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-soft active:scale-[0.98]"
           >
             <ShieldCheck size={20} />
-            Continue with Google
+            <span className="text-sm">Continue with Google</span>
           </button>
-          <p className="mt-8 text-[11px] text-brand-secondary font-bold uppercase tracking-widest opacity-50">
-            Optimized for 2G/3G/4G/5G
-          </p>
         </div>
       </div>
     );
@@ -64,28 +61,28 @@ function AppContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-brand-bg px-6">
         <div className="w-full max-w-sm text-center">
-          <h2 className="text-2xl font-black mb-2 tracking-tight">Choose Your Role</h2>
-          <p className="text-brand-secondary mb-10 font-medium">Select your primary activity on CampusConnect.</p>
-          <div className="grid grid-cols-1 gap-4">
+          <h2 className="text-xl font-bold mb-1 tracking-tight">Access Mode</h2>
+          <p className="text-[14px] text-brand-secondary mb-8 font-medium text-balance">Select your primary usage role.</p>
+          <div className="grid grid-cols-1 gap-3">
             <button 
               onClick={() => updateRole('teacher')}
-              className="group bg-brand-surface border-2 border-brand-border p-6 rounded-3xl text-left hover:border-brand-primary transition-all active:scale-[0.98]"
+              className="group bg-brand-surface border border-brand-border/40 p-5 rounded-xl text-left hover:border-brand-primary/30 transition-all active:scale-[0.99] shadow-soft"
             >
-              <div className="p-3 bg-brand-primary/10 rounded-2xl w-fit mb-4 group-hover:bg-brand-primary transition-colors">
-                <GraduationCap className="text-brand-primary group-hover:text-white transition-colors" />
+              <div className="p-2.5 bg-brand-primary/5 rounded-lg w-fit mb-3 group-hover:bg-brand-primary transition-colors">
+                <GraduationCap className="text-brand-primary group-hover:text-white transition-colors" size={20} />
               </div>
-              <h3 className="font-black text-xl mb-1">Teacher</h3>
-              <p className="text-sm text-brand-secondary font-medium">Manage classes, create quizzes, and moderate chats.</p>
+              <h3 className="font-bold text-lg mb-0.5">Teacher</h3>
+              <p className="text-[13px] text-brand-secondary/70 font-medium">Manage classes, library and groups.</p>
             </button>
             <button 
               onClick={() => updateRole('student')}
-              className="group bg-brand-surface border-2 border-brand-border p-6 rounded-3xl text-left hover:border-brand-primary transition-all active:scale-[0.98]"
+              className="group bg-brand-surface border border-brand-border/40 p-5 rounded-xl text-left hover:border-brand-primary/30 transition-all active:scale-[0.99] shadow-soft"
             >
-              <div className="p-3 bg-brand-primary/10 rounded-2xl w-fit mb-4 group-hover:bg-brand-primary transition-colors">
-                <BookOpen className="text-brand-primary group-hover:text-white transition-colors" />
+              <div className="p-2.5 bg-brand-primary/5 rounded-lg w-fit mb-3 group-hover:bg-brand-primary transition-colors">
+                <BookOpen className="text-brand-primary group-hover:text-white transition-colors" size={20} />
               </div>
-              <h3 className="font-black text-xl mb-1">Student</h3>
-              <p className="text-sm text-brand-secondary font-medium">Join classes, access study guides, and communicate with peers.</p>
+              <h3 className="font-bold text-lg mb-0.5">Student</h3>
+              <p className="text-[13px] text-brand-secondary/70 font-medium">Join classes and peer-to-peer chats.</p>
             </button>
           </div>
         </div>

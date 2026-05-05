@@ -173,9 +173,9 @@ export default function Library() {
   const currentSubjectData = SUBJECTS.find(s => s.id === (selectedSubject || newSubject));
 
   return (
-    <div className="space-y-6 min-h-full pb-20">
+    <div className="space-y-4 min-h-full pb-20">
       {/* Header & Back Button Section */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         {(selectedSubject || selectedGrade) && (
           <button 
             onClick={() => {
@@ -183,35 +183,32 @@ export default function Library() {
               else setSelectedSubject(null);
               setSearchQuery('');
             }}
-            className="flex items-center gap-2 self-start px-4 py-2 bg-white border border-brand-border rounded-full text-[11px] font-black uppercase tracking-widest text-brand-secondary shadow-sm hover:translate-x-[-4px] transition-all"
+            className="flex items-center gap-2 self-start px-3 h-[30px] bg-white border border-brand-border/50 rounded-lg text-[11px] font-semibold uppercase tracking-wider text-brand-secondary hover:text-brand-ink transition-all"
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={14} />
             Back to {selectedGrade ? selectedSubject?.toUpperCase() : 'Subjects'}
           </button>
         )}
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center">
-              <Book className="text-brand-primary" size={20} />
+            <div className="w-9 h-9 bg-brand-primary/5 rounded-xl flex items-center justify-center">
+              <Book className="text-brand-primary" size={18} />
             </div>
             <div>
-              <h2 className="text-xl font-black tracking-tight text-brand-ink">
-                {selectedSubject ? SUBJECTS.find(s => s.id === selectedSubject)?.name : 'Digital Library'}
+              <h2 className="text-lg font-bold tracking-tight text-brand-ink">
+                {selectedSubject ? SUBJECTS.find(s => s.id === selectedSubject)?.name : 'Library'}
               </h2>
-              <p className="text-[10px] font-bold text-brand-secondary uppercase tracking-widest">
-                {selectedGrade || (selectedSubject ? 'Select Grade' : 'Select Subject')}
-              </p>
             </div>
           </div>
           
           {profile?.role === 'teacher' && (
             <button 
               onClick={() => setShowAddForm(!showAddForm)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-brand-ink text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-95 transition-all"
+              className="flex items-center gap-1.5 px-4 h-[34px] bg-brand-ink text-white rounded-lg font-semibold text-[12px] uppercase tracking-wide transition-all shadow-soft"
             >
               {showAddForm ? <X size={14} /> : <Plus size={14} />}
-              {showAddForm ? 'Cancel' : 'Add Resource'}
+              {showAddForm ? 'Cancel' : 'New Resource'}
             </button>
           )}
         </div>
@@ -219,20 +216,20 @@ export default function Library() {
 
       {/* Global Search Bar */}
       <div className="relative group">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-secondary/50 group-focus-within:text-brand-primary transition-colors" size={18} />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-secondary/40" size={16} />
         <input 
           type="text"
-          placeholder={selectedGrade ? `Search in this folder...` : "Search all titles or teachers..."}
-          className="w-full bg-white border border-brand-border rounded-2xl pl-12 pr-4 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 transition-all shadow-sm font-medium"
+          placeholder={selectedGrade ? `Search folder...` : "Search resources..."}
+          className="w-full bg-white border border-brand-border/40 rounded-xl pl-10 pr-4 h-[44px] text-sm focus:outline-none focus:border-brand-primary/30 transition-all font-medium placeholder:text-brand-secondary/30"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
         {searchQuery && (
           <button 
             onClick={() => setSearchQuery('')}
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 bg-brand-bg rounded-full hover:bg-brand-border transition-colors"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 bg-brand-bg rounded-md hover:bg-brand-border transition-colors outline-none"
           >
-            <X size={14} />
+            <X size={12} />
           </button>
         )}
       </div>
@@ -369,27 +366,27 @@ export default function Library() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"
           >
             {SUBJECTS.map(subject => (
               <button
                 key={subject.id}
                 onClick={() => setSelectedSubject(subject.id)}
-                className="group relative overflow-hidden bg-white border border-brand-border rounded-3xl p-6 text-left hover:border-transparent transition-all hover:shadow-xl hover:-translate-y-1"
+                className="group relative overflow-hidden bg-white border border-brand-border rounded-xl p-4 text-left hover:border-transparent transition-all hover:shadow-soft active:scale-95"
                 style={{ '--hover-color': subject.color } as any}
               >
                 <div 
-                  className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity" 
+                  className="absolute inset-0 opacity-0 group-hover:opacity-[0.03] transition-opacity" 
                   style={{ backgroundColor: subject.color }}
                 />
                 <div 
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 text-white shadow-lg"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 text-white shadow-sm"
                   style={{ backgroundColor: subject.color }}
                 >
-                  <Folder size={24} />
+                  <Folder size={20} />
                 </div>
-                <h3 className="font-black text-brand-ink text-sm uppercase tracking-wider">{subject.name}</h3>
-                <p className="text-[9px] font-bold text-brand-secondary mt-1 uppercase tracking-widest">Explore Materials</p>
+                <h3 className="font-bold text-brand-ink text-[12px] uppercase tracking-wide truncate">{subject.name}</h3>
+                <p className="text-[10px] font-medium text-brand-secondary mt-0.5 opacity-60">Explore</p>
               </button>
             ))}
           </motion.div>
@@ -473,39 +470,31 @@ function ResourceCard({ resource, getFileIcon }: { resource: Resource, getFileIc
   };
 
   return (
-    <div className="bg-white border border-brand-border rounded-2xl p-4 flex items-center gap-4 hover:border-brand-primary transition-all group shadow-sm">
+    <div className="bg-white border border-brand-border/40 rounded-xl p-3 flex items-center gap-3 hover:border-brand-primary/30 transition-all group shadow-soft">
       <div className={cn(
-        "w-14 h-14 rounded-xl flex items-center justify-center shrink-0 border group-hover:scale-105 transition-transform",
+        "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border",
         fileInfo.bg,
         fileInfo.border
       )}>
-        <Icon className={fileInfo.color} size={28} />
+        <Icon className={fileInfo.color} size={20} />
       </div>
       
       <div className="flex-1 min-w-0">
-        <h3 className="text-[13px] font-black text-brand-ink truncate leading-tight group-hover:text-brand-primary transition-colors">
+        <h3 className="text-sm font-bold text-brand-ink truncate leading-tight group-hover:text-brand-primary transition-colors">
           {resource.title}
         </h3>
-        <div className="flex items-center gap-2 mt-1.5 px-0.5">
-          <span className={cn(
-            "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border",
-            fileInfo.bg,
-            fileInfo.border,
-            fileInfo.color
-          )}>
-            {fileInfo.label}
-          </span>
-          <span className="text-[9px] font-bold text-brand-secondary/60 truncate italic">
-            Uploaded by {resource.uploaderName}
+        <div className="flex items-center gap-2 mt-1 px-0.5">
+          <span className="text-[11px] font-medium text-brand-secondary/60 truncate">
+            {resource.uploaderName}
           </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         {user?.uid === resource.uploaderId && (
           <button 
             onClick={(e) => { e.stopPropagation(); handleDelete(); }}
-            className="p-3 text-brand-secondary hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+            className="p-1.5 text-brand-secondary hover:text-red-500 rounded-lg transition-all"
           >
             <Trash2 size={16} />
           </button>
@@ -514,7 +503,7 @@ function ResourceCard({ resource, getFileIcon }: { resource: Resource, getFileIc
           href={resource.link} 
           target="_blank" 
           rel="noopener noreferrer"
-          className="flex items-center gap-2 px-5 py-3 bg-brand-ink text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-primary transition-all shadow-md active:scale-95"
+          className="flex items-center gap-2 px-4 h-[34px] bg-brand-ink text-white rounded-lg font-semibold text-[12px] uppercase tracking-wide hover:brightness-110 transition-all active:scale-95"
           onClick={(e) => e.stopPropagation()}
         >
           {fileInfo.label === 'YouTube' ? <PlayCircle size={14} /> : <Eye size={14} />}

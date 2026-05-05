@@ -89,16 +89,16 @@ export default function Classes({ onViewChange }: { onViewChange: (view: PageVie
   );
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-6 pb-20">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-black tracking-tight">Your Classes</h2>
+        <h2 className="text-xl font-bold tracking-tight">Classes</h2>
         {profile?.role === 'teacher' && (
           <button 
             onClick={() => setShowCreate(!showCreate)}
-            className="bg-brand-primary text-white p-3 rounded-2xl flex items-center gap-2 hover:scale-95 transition-all shadow-lg"
+            className="bg-brand-primary text-white h-[34px] px-4 rounded-lg flex items-center gap-2 hover:brightness-110 transition-all shadow-soft"
           >
-            <Plus size={20} />
-            <span className="text-xs font-black uppercase tracking-widest">New Class</span>
+            <Plus size={16} />
+            <span className="text-[12px] font-semibold uppercase tracking-wider">New Class</span>
           </button>
         )}
       </div>
@@ -111,32 +111,34 @@ export default function Classes({ onViewChange }: { onViewChange: (view: PageVie
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <form onSubmit={handleCreate} className="bg-brand-surface border-2 border-brand-primary/20 rounded-3xl p-6 space-y-4 shadow-xl">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-brand-secondary">Class Name</label>
+            <form onSubmit={handleCreate} className="bg-brand-surface border border-brand-border/40 rounded-xl p-4 space-y-4 shadow-soft">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-brand-secondary ml-1">Class Name</label>
                 <input 
+                  required
                   type="text" 
                   value={newClassName}
                   onChange={(e) => setNewClassName(e.target.value)}
                   placeholder="e.g. Advanced Physics"
-                  className="w-full bg-brand-bg border border-brand-border rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                  className="w-full bg-brand-bg border border-brand-border/30 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-primary/30 outline-none"
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-brand-secondary">Subject</label>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-brand-secondary ml-1">Subject</label>
                 <input 
+                  required
                   type="text" 
                   value={newClassSubject}
                   onChange={(e) => setNewClassSubject(e.target.value)}
                   placeholder="e.g. Science"
-                  className="w-full bg-brand-bg border border-brand-border rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                  className="w-full bg-brand-bg border border-brand-border/30 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-primary/30 outline-none"
                 />
               </div>
               <button 
                 type="submit"
-                className="w-full bg-brand-ink text-white font-black py-4 rounded-2xl hover:scale-[0.98] transition-all"
+                className="w-full bg-brand-ink text-white font-semibold py-2.5 rounded-lg text-sm hover:brightness-110 transition-all mt-2"
               >
-                Launch Classroom
+                Create Class
               </button>
             </form>
           </motion.div>
@@ -221,26 +223,27 @@ function ClassItem({ c, isJoined, isPending, onJoin }: { c: Class, isJoined?: bo
 
   return (
     <div className={cn(
-      "bg-brand-surface border-2 rounded-3xl p-5 shadow-sm transition-all",
-      isExpanded ? "border-brand-primary ring-4 ring-brand-primary/5" : "border-brand-border hover:border-brand-primary/30"
+      "bg-brand-surface border border-brand-border/40 rounded-xl p-4 shadow-soft transition-all",
+      isExpanded ? "border-brand-primary/30" : "hover:border-brand-primary/20"
     )}>
       <div 
         className={cn("flex items-center justify-between", isJoined && "cursor-pointer")}
         onClick={() => isJoined && setIsExpanded(!isExpanded)}
       >
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-brand-bg rounded-2xl flex items-center justify-center border border-brand-border shadow-inner">
-            {profile?.role === 'teacher' ? <GraduationCap className="text-brand-primary" /> : <BookOpen className="text-brand-primary" />}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-brand-bg rounded-xl flex items-center justify-center border border-brand-border/20">
+            {profile?.role === 'teacher' ? <GraduationCap className="text-brand-primary" size={20} /> : <BookOpen className="text-brand-primary" size={20} />}
           </div>
           <div>
-            <h4 className="font-black text-brand-ink text-lg">{c.name}</h4>
+            <h4 className="font-bold text-brand-ink text-sm leading-tight">{c.name}</h4>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-[10px] font-black bg-brand-bg px-2 py-0.5 rounded text-brand-secondary uppercase tracking-widest">
+              <span className="text-[11px] font-medium text-brand-secondary/60">
                 {c.subject}
               </span>
-              <div className="flex items-center gap-1 text-[10px] font-bold text-brand-secondary">
+              <span className="text-brand-border/40 text-[8px]">•</span>
+              <div className="flex items-center gap-1 text-[11px] font-medium text-brand-secondary/60">
                 <Users size={12} />
-                {c.studentIds.length} Student{c.studentIds.length !== 1 ? 's' : ''}
+                {c.studentIds.length}
               </div>
             </div>
           </div>
@@ -250,21 +253,21 @@ function ClassItem({ c, isJoined, isPending, onJoin }: { c: Class, isJoined?: bo
           {onJoin && (
             <button 
               onClick={(e) => { e.stopPropagation(); onJoin(); }}
-              className="bg-brand-primary text-white font-black px-5 py-2.5 rounded-2xl text-xs uppercase tracking-widest hover:scale-95 transition-all shadow-md"
+              className="bg-brand-primary text-white font-semibold h-[34px] px-4 rounded-lg text-[12px] uppercase tracking-wider hover:brightness-105 transition-all shadow-soft"
             >
               Join
             </button>
           )}
           
           {isPending && (
-            <div className="bg-orange-50 text-orange-500 border border-orange-100 font-black px-4 py-2 rounded-2xl text-[10px] uppercase tracking-widest">
+            <div className="bg-brand-bg text-brand-secondary border border-brand-border/20 font-semibold px-3 h-[30px] flex items-center rounded-lg text-[11px] uppercase tracking-wider">
               Pending
             </div>
           )}
 
           {isJoined && (
-            <div className="text-brand-secondary">
-              {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            <div className="text-brand-secondary/40">
+              {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
             </div>
           )}
         </div>

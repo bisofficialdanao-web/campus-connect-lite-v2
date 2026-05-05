@@ -32,7 +32,7 @@ export default function BottomNav({ currentView, onViewChange }: BottomNavProps)
               : "text-brand-secondary"
           )}
         >
-          <item.icon size={18} strokeWidth={currentView === item.id ? 2.5 : 2} />
+          <item.icon size={20} strokeWidth={currentView === item.id ? 2 : 1.5} />
           <span className="text-[8px] font-black uppercase tracking-[0.1em]">{item.label}</span>
           {currentView === item.id && (
             <motion.div 

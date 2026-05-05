@@ -166,49 +166,47 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
         </div>
 
         {/* Create Post */}
-        <div className="bg-brand-surface border border-brand-card-border rounded-xl p-4 sm:p-5 shadow-soft">
-          <form onSubmit={handlePost} className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="hidden sm:flex w-10 h-10 rounded-full bg-brand-bg border border-brand-border/30 items-center justify-center overflow-hidden shrink-0 shadow-sm">
-                {isAnonymous ? <Ghost size={20} className="text-brand-ink" /> : (
-                  profile?.photoURL ? <img src={profile.photoURL} className="w-full h-full object-cover" /> : <div className="text-sm font-black text-brand-primary uppercase">{profile?.displayName?.[0]}</div>
+        <div className="bg-brand-surface border border-brand-card-border rounded-xl p-4 shadow-soft">
+          <form onSubmit={handlePost} className="flex flex-col gap-3">
+            <div className="flex gap-3">
+              <div className="hidden sm:flex w-9 h-9 rounded-xl bg-brand-bg border border-brand-border/30 items-center justify-center overflow-hidden shrink-0">
+                {isAnonymous ? <Ghost size={18} className="text-brand-ink" /> : (
+                  profile?.photoURL ? <img src={profile.photoURL} className="w-full h-full object-cover" /> : <div className="text-xs font-black text-brand-primary uppercase">{profile?.displayName?.[0]}</div>
                 )}
               </div>
               <div className="flex-1">
                 <textarea 
-                  placeholder="Share a thought or confession..."
-                  className="w-full bg-[#f5f5f5] border-none rounded-2xl p-4 text-brand-ink font-medium text-sm min-h-[100px] focus:ring-1 focus:ring-brand-primary placeholder:text-brand-secondary/50 resize-none"
+                  placeholder="Share a thought..."
+                  className="w-full bg-[#f8f9fa] border border-brand-border/30 rounded-xl p-3 text-brand-ink font-medium text-sm min-h-[80px] focus:ring-1 focus:ring-brand-primary/20 focus:border-brand-primary/30 placeholder:text-brand-secondary/40 resize-none outline-none transition-all"
                   value={newPost}
                   onChange={(e) => setNewPost(e.target.value)}
                 />
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-[#f0f0f0] ml-0 sm:ml-14">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-brand-border/20">
               <div className="flex items-center gap-2">
                 <button 
                   type="button"
                   onClick={() => setIsAnonymous(!isAnonymous)}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-2 rounded-full transition-all font-black text-[10px] uppercase tracking-widest border",
+                    "flex items-center gap-1.5 px-3 h-[30px] rounded-lg transition-all font-semibold text-[11px] uppercase tracking-wider border",
                     isAnonymous ? "bg-brand-ink text-white border-brand-ink" : "bg-brand-bg text-brand-secondary border-brand-border/50 hover:bg-white"
                   )}
                 >
-                  <Users size={12} />
+                  <Users size={14} />
                   {isAnonymous ? 'Anonymous' : 'Public'}
                 </button>
-                <div className="flex items-center">
-                  <button type="button" className="p-2 text-brand-secondary hover:text-brand-primary transition-colors"><Smile size={18} /></button>
-                </div>
+                <button type="button" className="p-1.5 text-brand-secondary hover:text-brand-primary transition-colors"><Smile size={18} /></button>
               </div>
               
               <motion.button 
                 whileTap={{ scale: 0.98 }}
                 type="submit"
                 disabled={!newPost.trim() || isPosting}
-                className="bg-brand-primary text-white px-8 py-3 sm:py-2 rounded-full font-black text-[11px] uppercase tracking-widest hover:brightness-110 active:brightness-95 transition-all disabled:opacity-50 disabled:scale-100 shadow-neon flex items-center justify-center gap-2 w-full sm:w-auto"
+                className="bg-brand-primary text-white px-6 h-[34px] rounded-lg font-semibold text-[12px] uppercase tracking-wider hover:brightness-105 transition-all disabled:opacity-50 flex items-center justify-center gap-2 w-full sm:w-auto"
               >
-                {isPosting ? <Loader2 size={16} className="animate-spin" /> : <>Post <Send size={14} /></>}
+                {isPosting ? <Loader2 size={14} className="animate-spin" /> : <>Post <Send size={14} /></>}
               </motion.button>
             </div>
           </form>
@@ -521,63 +519,60 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "bg-white border border-brand-border/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 p-4 sm:p-6",
-        post.isModule && "border-blue-200 ring-2 ring-blue-50 ring-offset-0"
+        "bg-white border border-brand-border/40 rounded-xl overflow-hidden shadow-soft p-4",
+        post.isModule && "border-blue-100"
       )}
     >
       {post.isModule && (
-        <div className="bg-blue-50 px-5 py-2 -mx-5 -mt-5 mb-4 flex items-center gap-2 border-b border-blue-100">
-          <BookOpen size={14} className="text-blue-500" />
-          <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest leading-none">Class Module</span>
+        <div className="bg-blue-50 px-4 py-1.5 -mx-4 -mt-4 mb-3 flex items-center gap-2 border-b border-blue-100">
+          <BookOpen size={12} className="text-blue-500" />
+          <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider leading-none">Module</span>
         </div>
       )}
       <div>
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3.5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
             <motion.button 
               whileTap={!post.isAnonymous ? { scale: 0.95 } : {}}
               onClick={() => !post.isAnonymous && onUserClick(post.authorId)}
               className={cn(
-                "w-11 h-11 rounded-full flex items-center justify-center overflow-hidden border transition-all",
-                post.isAnonymous ? "bg-brand-ink border-brand-ink shadow-sm" : "bg-brand-bg border-brand-border/50 shadow-sm hover:border-brand-primary"
+                "w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden border transition-all",
+                post.isAnonymous ? "bg-brand-ink text-white border-brand-ink" : "bg-brand-bg border-brand-border/30 hover:border-brand-primary"
               )}
             >
               {displayPhoto ? (
                 <img src={displayPhoto} alt="" className="w-full h-full object-cover" />
               ) : post.isAnonymous ? (
-                <Ghost size={22} className="text-white opacity-80" />
+                <Ghost size={18} className="opacity-80" />
               ) : (
-                <span className="text-base font-black text-brand-primary uppercase">{post.authorName?.[0] || 'U'}</span>
+                <span className="text-xs font-black text-brand-primary uppercase">{post.authorName?.[0] || 'U'}</span>
               )}
             </motion.button>
-            <div className="text-left">
+            <div className="text-left flex flex-col -gap-0.5">
               <button 
                 onClick={() => !post.isAnonymous && onUserClick(post.authorId)}
                 className={cn(
-                  "text-[14px] font-black tracking-tight flex items-center gap-2",
+                  "text-[14px] font-bold tracking-tight",
                   post.isAnonymous ? "text-brand-ink/70 no-underline cursor-default" : "text-brand-ink cursor-pointer hover:text-brand-primary transition-colors"
                 )}
               >
                 {post.isAnonymous ? 'Anonymous Member' : post.authorName}
-                {post.isAnonymous && <span className="text-[8px] font-black text-white bg-brand-ink px-1.5 py-0.5 rounded uppercase tracking-tighter">🔒 Hidden</span>}
               </button>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[10px] font-bold text-brand-secondary/60 uppercase tracking-widest">{timeLabel}</span>
-                {post.isModule && <span className="w-1 h-1 rounded-full bg-brand-secondary/30" />}
-                {post.isModule && <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest">Instructor</span>}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-brand-secondary/60 font-medium">{timeLabel}</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             {user?.uid === post.authorId && (
               <>
                 <button 
                   onClick={() => setIsEditing(!isEditing)}
-                  className={cn("p-1.5 rounded-lg transition-colors", isEditing ? "text-brand-primary bg-brand-primary/10" : "text-brand-secondary hover:text-brand-primary hover:bg-brand-bg")}
+                  className={cn("p-1.5 rounded-lg transition-colors", isEditing ? "text-brand-primary bg-brand-primary/5" : "text-brand-secondary hover:text-brand-primary")}
                 >
                   <Edit3 size={14} />
                 </button>
-                <button onClick={handleDelete} className="p-1.5 text-brand-secondary hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                <button onClick={handleDelete} className="p-1.5 text-brand-secondary hover:text-red-500 rounded-lg transition-colors">
                   <Trash2 size={14} />
                 </button>
               </>
@@ -589,48 +584,44 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
         </div>
 
         {isEditing ? (
-          <div className="space-y-3 mb-4">
+          <div className="space-y-2 mb-3">
             <textarea 
               value={editContent}
               disabled={isSaving}
               onChange={(e) => setEditContent(e.target.value)}
-              className="w-full bg-brand-bg border border-brand-border rounded-xl p-3 text-sm font-medium focus:outline-none focus:border-brand-primary min-h-[100px] transition-colors disabled:opacity-50"
+              className="w-full bg-brand-bg border border-brand-border/50 rounded-lg p-3 text-sm font-medium focus:outline-none focus:border-brand-primary/30 min-h-[80px] transition-colors disabled:opacity-50"
               placeholder="Edit your post..."
             />
-            <div className="flex justify-end gap-2 px-1">
+            <div className="flex justify-end gap-2 pr-1">
               <button 
                 onClick={() => setIsEditing(false)} 
                 disabled={isSaving}
-                className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-brand-secondary hover:text-brand-ink transition-colors disabled:opacity-50"
+                className="px-3 h-[30px] text-[11px] font-semibold uppercase text-brand-secondary hover:text-brand-ink transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleEdit} 
                 disabled={isSaving || !editContent.trim()}
-                className="px-4 py-1.5 bg-brand-ink text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm hover:scale-95 transition-all disabled:opacity-50 disabled:scale-100 min-w-[70px] flex items-center justify-center"
+                className="px-4 h-[30px] bg-brand-ink text-white rounded-lg text-[11px] font-semibold uppercase shadow-sm hover:brightness-110 transition-all disabled:opacity-50 min-w-[70px] flex items-center justify-center"
               >
                 {isSaving ? <Loader2 size={12} className="animate-spin" /> : 'Save'}
               </button>
             </div>
           </div>
         ) : (
-          <div className="space-y-4 mb-6 px-1">
+          <div className="space-y-3 mb-4">
             <motion.div 
-              whileTap={shouldTruncate ? { scale: 0.995 } : {}}
               onClick={() => shouldTruncate && setIsExpanded(!isExpanded)}
               className={cn(
                 "transition-all",
                 shouldTruncate && "cursor-pointer hover:opacity-90"
               )}
             >
-              <p className="text-brand-ink text-[15px] sm:text-[16px] font-medium leading-[1.6] whitespace-pre-wrap">
+              <p className="text-brand-ink text-sm font-medium leading-relaxed whitespace-pre-wrap">
                 {displayContent}
                 {shouldTruncate && !isExpanded && (
-                  <span className="text-brand-primary font-black text-[10px] ml-2 uppercase tracking-widest border-b-2 border-brand-primary/30 pb-0.5">Read Full Post</span>
-                )}
-                {shouldTruncate && isExpanded && (
-                  <span className="text-brand-primary font-black text-[10px] ml-2 uppercase tracking-widest border-b-2 border-brand-primary/30 pb-0.5">Collapse View</span>
+                  <span className="text-brand-primary font-bold text-[11px] ml-2 uppercase hover:underline">Read more</span>
                 )}
               </p>
             </motion.div>
@@ -640,32 +631,29 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
                 href={post.fileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 p-3 bg-brand-bg rounded-xl border border-brand-border/50 hover:border-blue-300 transition-colors group/module"
+                className="flex items-center gap-3 p-3 bg-brand-bg/50 rounded-xl border border-brand-border/20 hover:border-brand-primary/20 transition-colors group/module"
               >
-                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-blue-500 shadow-sm border border-brand-border/30">
-                  <FileText size={20} />
+                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-blue-500 border border-brand-border/10">
+                  <FileText size={16} />
                 </div>
                 <div className="flex-1 overflow-hidden">
-                  <p className="text-xs font-black text-brand-ink truncate uppercase tracking-tight">{post.moduleName || 'Download File'}</p>
-                  <p className="text-[9px] font-bold text-brand-secondary uppercase opacity-60">Click to view or download</p>
+                  <p className="text-[12px] font-bold text-brand-ink truncate">{post.moduleName || 'Download File'}</p>
                 </div>
-                <Download size={16} className="text-brand-secondary group-hover/module:text-blue-500 group-hover/module:translate-y-0.5 transition-all" />
+                <Download size={14} className="text-brand-secondary group-hover/module:text-brand-primary transition-all" />
               </a>
             )}
           </div>
         )}
 
-        <div className="flex items-center flex-wrap gap-2 sm:gap-3 pt-4 border-t border-brand-border/20">
+        <div className="flex items-center flex-wrap gap-2 pt-3 border-t border-brand-border/20">
           <div className="relative">
-            <motion.button 
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+            <button 
               onClick={() => setShowReactionPicker(!showReactionPicker)}
               className={cn(
-                "flex items-center gap-1.5 py-2 px-4 rounded-full transition-all font-black text-[10px] uppercase tracking-widest border",
+                "flex items-center gap-1.5 h-[34px] px-4 rounded-lg transition-all font-semibold text-[11px] uppercase tracking-wide border",
                 Object.values(post.reactions || {}).some(uids => uids.includes(user?.uid || ''))
-                  ? "bg-brand-primary text-white border-brand-primary shadow-sm ring-4 ring-brand-primary/10" 
-                  : "bg-brand-bg text-brand-secondary border-brand-border/50 hover:bg-white hover:text-brand-primary hover:border-brand-primary/30"
+                  ? "bg-brand-primary/5 text-brand-primary border-brand-primary/20" 
+                  : "bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-brand-primary hover:border-brand-primary/20"
               )}
             >
               <Heart 
@@ -673,76 +661,43 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
                 className={cn(Object.values(post.reactions || {}).some(uids => uids.includes(user?.uid || '')) && "fill-current")} 
               />
               <span>React</span>
-            </motion.button>
-
-            <AnimatePresence>
-              {showReactionPicker && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                  className="absolute bottom-full left-0 mb-2 p-1.5 bg-white border border-brand-border shadow-huge rounded-2xl flex items-center gap-1 z-20"
-                >
-                  {REACTION_TYPES.map((rt) => (
-                    <button 
-                      key={rt.key}
-                      onClick={() => handleReact(rt.key)}
-                      className={cn(
-                        "w-9 h-9 flex items-center justify-center rounded-xl hover:bg-brand-bg transition-all active:scale-125 text-xl",
-                        post.reactions?.[rt.key]?.includes(user?.uid || '') && "bg-brand-primary/10 scale-110"
-                      )}
-                      title={rt.label}
-                    >
-                      {rt.emoji}
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+            </button>
           </div>
           
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+          <button 
             onClick={() => setShowComments(!showComments)}
             className={cn(
-              "flex items-center gap-1.5 py-2 px-4 rounded-full transition-all font-black text-[10px] uppercase tracking-widest border",
+              "flex items-center gap-1.5 h-[34px] px-4 rounded-lg transition-all font-semibold text-[11px] uppercase tracking-wide border",
               showComments 
-                ? "bg-brand-ink text-white border-brand-ink shadow-sm" 
-                : "bg-brand-bg text-brand-secondary border-brand-border/50 hover:bg-white hover:text-brand-ink hover:border-brand-ink/30"
+                ? "bg-brand-ink text-white border-brand-ink" 
+                : "bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-brand-ink hover:border-brand-ink/20"
             )}
           >
             <MessageSquare size={14} />
             <span>{post.commentCount || 0}</span>
-          </motion.button>
+          </button>
 
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+          <button 
             onClick={() => {
               if (navigator.share) {
-                navigator.share({
-                  title: 'Campus Life Post',
-                  text: post.content,
-                  url: window.location.href,
-                }).catch(() => {});
+                navigator.share({ title: 'Campus Post', text: post.content, url: window.location.href }).catch(() => {});
               }
             }}
-            className="flex items-center gap-1.5 py-2 px-4 rounded-full transition-all font-black text-[10px] uppercase tracking-widest border bg-brand-bg text-brand-secondary border-brand-border/50 hover:bg-white hover:text-brand-ink hover:border-brand-ink/30 ml-auto sm:ml-0"
+            className="flex items-center gap-1.5 h-[34px] px-4 rounded-lg transition-all font-semibold text-[11px] uppercase tracking-wide border bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-brand-ink hover:border-brand-ink/20 ml-auto sm:ml-0"
           >
             <Share2 size={14} />
             <span>Share</span>
-          </motion.button>
+          </button>
         </div>
 
         {/* Reaction Summary Bar */}
         {Object.entries(post.reactions || {}).some(([_, uids]) => uids.length > 0) && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
+          <div className="flex flex-wrap gap-1 mt-3">
             {REACTION_TYPES.map(rt => {
               const uids = post.reactions?.[rt.key] || [];
               if (uids.length === 0) return null;
               return (
-                <div key={rt.key} className="flex items-center gap-1.5 px-2 py-1 bg-brand-bg border border-brand-border/10 rounded-full text-[10px] font-black text-brand-secondary shadow-sm">
+                <div key={rt.key} className="flex items-center gap-1.5 px-2 h-[22px] bg-brand-bg border border-brand-border/10 rounded-md text-[10px] font-bold text-brand-secondary">
                   <span>{rt.emoji}</span>
                   <span>{uids.length}</span>
                 </div>
