@@ -4,12 +4,13 @@ import { User, ShieldCheck, Mail, LogOut, Edit3, Camera, Save, X, GraduationCap,
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { regulateImage } from '../lib/imageRegulator';
+import { handleFirestoreError, OperationType } from '../lib/errorHandlers';
 import { db, storage } from '../lib/firebase';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 
 export default function Profile() {
-  const { profile, logout } = useAuth();
+  const { profile, logout, auth } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState(profile?.displayName || '');
   const [photoURL, setPhotoURL] = useState(profile?.photoURL || '');
@@ -71,9 +72,11 @@ export default function Profile() {
         photoURL,
         updatedAt: serverTimestamp()
       });
+      alert('Profile updated successful!');
       setIsEditing(false);
     } catch (error) {
       console.error("Profile update failed", error);
+      handleFirestoreError(error, OperationType.WRITE, 'users', auth);
     } finally {
       setIsSaving(false);
     }

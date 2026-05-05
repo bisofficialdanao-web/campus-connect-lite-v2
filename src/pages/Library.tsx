@@ -22,7 +22,8 @@ import {
   CheckCircle2,
   FileUp,
   Files,
-  X
+  X,
+  Search
 } from 'lucide-react';
 import { askGuide } from '../services/geminiService';
 import { motion, AnimatePresence } from 'motion/react';
@@ -40,6 +41,7 @@ import {
   doc
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { handleFirestoreError, OperationType } from '../lib/errorHandlers';
 
 interface Resource {
   id: string;
@@ -52,13 +54,14 @@ interface Resource {
 }
 
 export default function Library() {
-  const { user, profile } = useAuth();
+  const { user, profile, auth } = useAuth();
   const [activeTab, setActiveTab] = useState<'files' | 'guide'>('files');
   const [resources, setResources] = useState<Resource[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newLink, setNewLink] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const q = query(collection(db, 'resources'), orderBy('createdAt', 'desc'));
@@ -74,20 +77,29 @@ export default function Library() {
     if (!newTitle.trim() || !newLink.trim() || !user || isAdding) return;
 
     setIsAdding(true);
+    const path = 'resources';
     try {
-      await addDoc(collection(db, 'resources'), {
-        title: newTitle,
-        link: newLink,
+      // Basic URL hygiene: ensure it has a protocol
+      let linkToSave = newLink.trim();
+      if (!linkToSave.startsWith('http://') && !linkToSave.startsWith('https://')) {
+        linkToSave = 'https://' + linkToSave;
+      }
+
+      await addDoc(collection(db, path), {
+        title: newTitle.trim(),
+        link: linkToSave,
         uploaderId: user.uid,
         uploaderName: profile?.displayName || 'Teacher',
         createdAt: serverTimestamp()
       });
+      
+      alert('Resource added successful!');
       setNewTitle('');
       setNewLink('');
       setShowAddForm(false);
     } catch (error) {
       console.error("Error adding resource:", error);
-      alert("Failed to add resource. Please check your connection.");
+      handleFirestoreError(error, OperationType.WRITE, path, auth);
     } finally {
       setIsAdding(false);
     }
@@ -142,7 +154,7 @@ export default function Library() {
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-brand-secondary mb-1 block px-1">Paste Google Drive/Web Link here</label>
                   <input 
-                    type="url" 
+                    type="text" 
                     placeholder="https://drive.google.com/..."
                     className="w-full bg-brand-bg border border-brand-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-primary font-mono text-[10px]"
                     value={newLink}
@@ -164,6 +176,20 @@ export default function Library() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Search Bar */}
+      {activeTab === 'files' && (
+        <div className="relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-secondary/50 group-focus-within:text-brand-primary transition-colors" size={16} />
+          <input 
+            type="text"
+            placeholder="Search by title or teacher name..."
+            className="w-full bg-brand-surface border border-brand-border/50 rounded-xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-all shadow-sm font-medium"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      )}
 
       {/* Tab Switcher */}
       <div className="flex bg-brand-surface border border-brand-border/50 rounded-xl p-1 shadow-sm">
@@ -198,17 +224,29 @@ export default function Library() {
             exit={{ opacity: 0, y: -10 }}
             className="space-y-4"
           >
-            {resources.length > 0 ? (
+            {resources.filter(r => 
+              r.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+              r.uploaderName.toLowerCase().includes(searchQuery.toLowerCase())
+            ).length > 0 ? (
               <div className="grid grid-cols-1 gap-3">
-                {resources.map(resource => (
-                  <ResourceCard key={resource.id} resource={resource} getFileIcon={getFileIcon} />
-                ))}
+                {resources
+                  .filter(r => 
+                    r.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                    r.uploaderName.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  .map(resource => (
+                    <ResourceCard key={resource.id} resource={resource} getFileIcon={getFileIcon} />
+                  ))}
               </div>
             ) : (
               <div className="bg-blue-50 border border-blue-100 rounded-2xl p-8 text-center">
                 <Book className="mx-auto text-brand-primary mb-3 opacity-50" size={32} />
-                <h3 className="font-black text-brand-ink text-sm mb-1">No materials yet</h3>
-                <p className="text-xs text-brand-secondary font-medium">Materials uploaded by teachers will appear here.</p>
+                <h3 className="font-black text-brand-ink text-sm mb-1">
+                  {searchQuery ? "No matching materials" : "No materials yet"}
+                </h3>
+                <p className="text-xs text-brand-secondary font-medium">
+                  {searchQuery ? "Try searching for something else." : "Materials uploaded by teachers will appear here."}
+                </p>
               </div>
             )}
           </motion.div>
