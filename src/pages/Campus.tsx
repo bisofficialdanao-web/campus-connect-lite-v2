@@ -521,8 +521,8 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "bg-brand-surface border border-brand-card-border rounded-xl overflow-hidden shadow-soft p-5",
-        post.isModule && "border-blue-200 border-2"
+        "bg-white border border-brand-border/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 p-4 sm:p-6",
+        post.isModule && "border-blue-200 ring-2 ring-blue-50 ring-offset-0"
       )}
     >
       {post.isModule && (
@@ -532,36 +532,40 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
         </div>
       )}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3.5">
             <motion.button 
               whileTap={!post.isAnonymous ? { scale: 0.95 } : {}}
               onClick={() => !post.isAnonymous && onUserClick(post.authorId)}
               className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center overflow-hidden border border-brand-border/30 shadow-inner transition-transform",
-                post.isAnonymous ? "bg-brand-ink border-brand-ink cursor-default" : "bg-brand-bg border-brand-border cursor-pointer hover:border-brand-primary/30"
+                "w-11 h-11 rounded-full flex items-center justify-center overflow-hidden border transition-all",
+                post.isAnonymous ? "bg-brand-ink border-brand-ink shadow-sm" : "bg-brand-bg border-brand-border/50 shadow-sm hover:border-brand-primary"
               )}
             >
               {displayPhoto ? (
                 <img src={displayPhoto} alt="" className="w-full h-full object-cover" />
               ) : post.isAnonymous ? (
-                <Ghost size={20} className="text-white opacity-50" />
+                <Ghost size={22} className="text-white opacity-80" />
               ) : (
-                <span className="text-sm font-black text-brand-primary uppercase">{post.authorName?.[0] || 'U'}</span>
+                <span className="text-base font-black text-brand-primary uppercase">{post.authorName?.[0] || 'U'}</span>
               )}
             </motion.button>
             <div className="text-left">
               <button 
                 onClick={() => !post.isAnonymous && onUserClick(post.authorId)}
                 className={cn(
-                  "text-sm font-black tracking-tight flex items-center gap-1.5 hover:underline decoration-brand-border",
-                  post.isAnonymous ? "text-brand-ink/60 no-underline cursor-default" : "text-brand-ink cursor-pointer"
+                  "text-[14px] font-black tracking-tight flex items-center gap-2",
+                  post.isAnonymous ? "text-brand-ink/70 no-underline cursor-default" : "text-brand-ink cursor-pointer hover:text-brand-primary transition-colors"
                 )}
               >
                 {post.isAnonymous ? 'Anonymous Member' : post.authorName}
-                {post.isAnonymous && <span className="text-[8px] font-black text-brand-secondary bg-brand-bg px-1.5 py-0.5 rounded border border-brand-border/30">LITE</span>}
+                {post.isAnonymous && <span className="text-[8px] font-black text-white bg-brand-ink px-1.5 py-0.5 rounded uppercase tracking-tighter">🔒 Hidden</span>}
               </button>
-              <p className="text-[10px] font-bold text-brand-secondary/60 uppercase tracking-widest">{timeLabel}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] font-bold text-brand-secondary/60 uppercase tracking-widest">{timeLabel}</span>
+                {post.isModule && <span className="w-1 h-1 rounded-full bg-brand-secondary/30" />}
+                {post.isModule && <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest">Instructor</span>}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -611,22 +615,22 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
             </div>
           </div>
         ) : (
-          <div className="space-y-3 mb-4">
+          <div className="space-y-4 mb-6 px-1">
             <motion.div 
               whileTap={shouldTruncate ? { scale: 0.995 } : {}}
               onClick={() => shouldTruncate && setIsExpanded(!isExpanded)}
               className={cn(
-                "group/content transition-all",
-                shouldTruncate && "cursor-pointer hover:opacity-80"
+                "transition-all",
+                shouldTruncate && "cursor-pointer hover:opacity-90"
               )}
             >
-              <p className="text-brand-ink text-[15px] font-medium leading-relaxed whitespace-pre-wrap">
+              <p className="text-brand-ink text-[15px] sm:text-[16px] font-medium leading-[1.6] whitespace-pre-wrap">
                 {displayContent}
                 {shouldTruncate && !isExpanded && (
-                  <span className="text-brand-primary font-black text-[10px] ml-1 uppercase tracking-wider inline-block">Read More</span>
+                  <span className="text-brand-primary font-black text-[10px] ml-2 uppercase tracking-widest border-b-2 border-brand-primary/30 pb-0.5">Read Full Post</span>
                 )}
                 {shouldTruncate && isExpanded && (
-                  <span className="text-brand-primary font-black text-[10px] ml-1 uppercase tracking-wider inline-block">Show Less</span>
+                  <span className="text-brand-primary font-black text-[10px] ml-2 uppercase tracking-widest border-b-2 border-brand-primary/30 pb-0.5">Collapse View</span>
                 )}
               </p>
             </motion.div>
@@ -651,24 +655,24 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
           </div>
         )}
 
-        <div className="flex items-center gap-2 pt-3 border-t border-brand-border/30">
+        <div className="flex items-center flex-wrap gap-2 sm:gap-3 pt-4 border-t border-brand-border/20">
           <div className="relative">
             <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setShowReactionPicker(!showReactionPicker)}
               className={cn(
-                "flex items-center gap-1.5 py-1.5 px-3 rounded-xl transition-colors font-black text-[10px] uppercase tracking-widest border",
+                "flex items-center gap-1.5 py-2 px-4 rounded-full transition-all font-black text-[10px] uppercase tracking-widest border",
                 Object.values(post.reactions || {}).some(uids => uids.includes(user?.uid || ''))
-                  ? "bg-brand-primary/10 text-brand-primary border-brand-primary/20 shadow-sm" 
-                  : "bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-brand-primary hover:border-brand-primary/20"
+                  ? "bg-brand-primary text-white border-brand-primary shadow-sm ring-4 ring-brand-primary/10" 
+                  : "bg-brand-bg text-brand-secondary border-brand-border/50 hover:bg-white hover:text-brand-primary hover:border-brand-primary/30"
               )}
             >
               <Heart 
                 size={14} 
-                className={cn(Object.values(post.reactions || {}).some(uids => uids.includes(user?.uid || '')) && "fill-current animate-pulse")} 
+                className={cn(Object.values(post.reactions || {}).some(uids => uids.includes(user?.uid || '')) && "fill-current")} 
               />
-              React
+              <span>React</span>
             </motion.button>
 
             <AnimatePresence>
@@ -698,36 +702,36 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
           </div>
           
           <motion.button 
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setShowComments(!showComments)}
             className={cn(
-              "flex items-center gap-1.5 py-1.5 px-3 rounded-xl transition-colors font-black text-[10px] uppercase tracking-widest border",
+              "flex items-center gap-1.5 py-2 px-4 rounded-full transition-all font-black text-[10px] uppercase tracking-widest border",
               showComments 
-                ? "bg-brand-primary/10 text-brand-primary border-brand-primary/20 shadow-sm" 
-                : "bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-brand-primary hover:border-brand-primary/20"
+                ? "bg-brand-ink text-white border-brand-ink shadow-sm" 
+                : "bg-brand-bg text-brand-secondary border-brand-border/50 hover:bg-white hover:text-brand-ink hover:border-brand-ink/30"
             )}
           >
             <MessageSquare size={14} />
-            {post.commentCount || 0}
+            <span>{post.commentCount || 0}</span>
           </motion.button>
 
           <motion.button 
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => {
               if (navigator.share) {
                 navigator.share({
-                  title: 'SchoolLite Post',
+                  title: 'Campus Life Post',
                   text: post.content,
                   url: window.location.href,
                 }).catch(() => {});
               }
             }}
-            className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl transition-colors font-black text-[10px] uppercase tracking-widest border bg-brand-bg text-brand-secondary border-brand-border/30 hover:bg-white hover:text-brand-ink hover:border-brand-ink/20"
+            className="flex items-center gap-1.5 py-2 px-4 rounded-full transition-all font-black text-[10px] uppercase tracking-widest border bg-brand-bg text-brand-secondary border-brand-border/50 hover:bg-white hover:text-brand-ink hover:border-brand-ink/30 ml-auto sm:ml-0"
           >
             <Share2 size={14} />
-            Share
+            <span>Share</span>
           </motion.button>
         </div>
 
@@ -923,24 +927,24 @@ function CommentItem({ comment, onDelete, onUpdate, onUserClick, onReact }: { co
   };
 
   return (
-    <div className="flex gap-2 group/item text-left">
+    <div className="flex gap-3 group/item text-left animate-in fade-in slide-in-from-left-2 duration-300">
       <motion.button 
-        whileTap={{ scale: 0.95 }}
+        whileTap={{ scale: 0.92 }}
         onClick={() => onUserClick(comment.authorId)}
-        className="w-6 h-6 rounded-md bg-brand-surface border border-brand-border/30 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer hover:border-brand-primary/30 shadow-sm"
+        className="w-8 h-8 rounded-lg bg-white border border-brand-border/50 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer hover:border-brand-primary/50 shadow-sm transition-all"
       >
-         {comment.authorPhoto ? <img src={comment.authorPhoto} className="w-full h-full object-cover" /> : <div className="text-[10px] font-bold text-brand-primary uppercase">{comment.authorName?.[0]}</div>}
+         {comment.authorPhoto ? <img src={comment.authorPhoto} className="w-full h-full object-cover" /> : <div className="text-[11px] font-black text-brand-primary uppercase">{comment.authorName?.[0]}</div>}
       </motion.button>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-0.5">
-          <div className="flex items-center gap-1.5">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
             <button 
               onClick={() => onUserClick(comment.authorId)}
-              className="text-[9px] font-black text-brand-primary uppercase tracking-wider hover:underline"
+              className="text-[10px] font-black text-brand-ink uppercase tracking-tight hover:text-brand-primary transition-colors"
             >
               {comment.authorName}
             </button>
-            <span className="text-[8px] font-bold text-brand-secondary opacity-50 uppercase tracking-tighter">
+            <span className="text-[9px] font-bold text-brand-secondary/50 uppercase tracking-tighter">
               {comment.createdAt?.toDate ? formatDistanceToNow(comment.createdAt.toDate(), { addSuffix: true }) : 'just now'}
             </span>
           </div>
