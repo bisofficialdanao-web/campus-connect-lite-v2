@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, getDoc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Class, UserProfile } from '../types';
@@ -337,7 +337,35 @@ export default function Classes({ onViewChange }: { onViewChange: (view: PageVie
 function ClassItem({ c, isJoined, isPending, onJoin }: { c: Class, isJoined?: boolean, isPending?: boolean, onJoin?: () => void }) {
   const { user, profile } = useAuth();
   const [showStudents, setShowStudents] = useState(false);
+  const [showMasterList, setShowMasterList] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [joinedStudents, setJoinedStudents] = useState<UserProfile[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+
+  useEffect(() => {
+    if (isExpanded && c.studentIds.length > 0 && joinedStudents.length === 0) {
+      const fetchStudents = async () => {
+        setLoadingStudents(true);
+        try {
+          // Fetch profiles in chunks of 10 if needed, but for now simple loop or single query
+          // Firestore doesn't support 'where in' for more than 30 IDs easily
+          const profiles: UserProfile[] = [];
+          for (const sid of c.studentIds) {
+             const docSnap = await getDoc(doc(db, 'users', sid));
+             if (docSnap.exists()) {
+               profiles.push({ id: docSnap.id, ...docSnap.data() } as UserProfile);
+             }
+          }
+          setJoinedStudents(profiles);
+        } catch (error) {
+          console.error("Error fetching students:", error);
+        } finally {
+          setLoadingStudents(false);
+        }
+      };
+      fetchStudents();
+    }
+  }, [isExpanded, c.studentIds]);
 
   const approveStudent = async (studentId: string) => {
     const classRef = doc(db, 'classes', c.id);
@@ -421,9 +449,58 @@ function ClassItem({ c, isJoined, isPending, onJoin }: { c: Class, isJoined?: bo
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden mt-3 pt-3 border-t border-brand-border/10"
+            className="overflow-hidden mt-3 pt-3 border-t border-brand-border/10 space-y-4"
           >
-            <div className="py-6 text-center bg-brand-bg rounded-xl border border-dashed border-brand-border/20">
+            {/* Master List of Students */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h5 className="text-[10px] font-black uppercase text-brand-secondary/60 tracking-widest flex items-center gap-1.5">
+                  <Users size={12} className="text-brand-primary" />
+                  Class Roster ({c.studentIds.length})
+                </h5>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setShowMasterList(!showMasterList); }}
+                  className="text-[9px] font-bold uppercase text-brand-primary tracking-tight h-[22px] px-2 flex items-center rounded-md hover:bg-brand-primary/5 transition-colors"
+                >
+                  {showMasterList ? 'Hide List' : 'Show List'}
+                </button>
+              </div>
+
+              <AnimatePresence>
+                {showMasterList && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    className="grid grid-cols-1 gap-1.5"
+                  >
+                    {loadingStudents ? (
+                      <div className="py-4 text-center text-[9px] font-bold text-brand-secondary/40 uppercase animate-pulse">Loading members...</div>
+                    ) : joinedStudents.length > 0 ? (
+                      joinedStudents.map(student => (
+                        <div key={student.uid} className="flex items-center justify-between p-2 bg-brand-bg/50 border border-brand-border/10 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-md bg-white border border-brand-border/20 flex items-center justify-center overflow-hidden">
+                              {student.photoURL ? (
+                                <img src={student.photoURL} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-[10px] font-bold text-brand-secondary/40">{student.displayName?.charAt(0)}</span>
+                              )}
+                            </div>
+                            <span className="text-[11px] font-bold text-brand-ink">{student.displayName}</span>
+                          </div>
+                          {student.role === 'teacher' && <ShieldCheck size={12} className="text-brand-primary" />}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-4 text-center text-[9px] font-bold text-brand-secondary/40 uppercase">No students have joined yet</div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="py-4 text-center bg-brand-bg rounded-xl border border-dashed border-brand-border/20">
                <p className="text-[10px] font-bold text-brand-secondary/60 uppercase tracking-widest">
                  View assignments in the library tab
                </p>

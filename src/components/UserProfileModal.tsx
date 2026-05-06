@@ -6,6 +6,7 @@ import { UserProfile, Friendship } from '../types';
 import { X, UserPlus, UserCheck, MessageSquare, Clock, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { createNotification } from '../lib/notifications';
 
 interface UserProfileModalProps {
   targetUid: string;
@@ -37,6 +38,7 @@ export default function UserProfileModal({ targetUid, onClose }: UserProfileModa
   useEffect(() => {
     if (!user || !targetUid) return;
     
+    // We listen to both directions
     const q1 = query(
       collection(db, 'friendships'),
       where('requesterId', '==', user.uid),
@@ -48,20 +50,22 @@ export default function UserProfileModal({ targetUid, onClose }: UserProfileModa
       where('receiverId', '==', user.uid)
     );
 
+    let friendship1: Friendship | null = null;
+    let friendship2: Friendship | null = null;
+
     const unsub1 = onSnapshot(q1, (snap) => {
-      if (!snap.empty) {
-        setFriendship({ id: snap.docs[0].id, ...snap.docs[0].data() } as Friendship);
-      } else {
-        // Only clear if the other query didn't find anything
-        // This is a bit tricky with two separate listeners
-      }
+      friendship1 = !snap.empty ? { id: snap.docs[0].id, ...snap.docs[0].data() } as Friendship : null;
+      updateFriendshipState();
     });
 
     const unsub2 = onSnapshot(q2, (snap) => {
-      if (!snap.empty) {
-        setFriendship({ id: snap.docs[0].id, ...snap.docs[0].data() } as Friendship);
-      }
+      friendship2 = !snap.empty ? { id: snap.docs[0].id, ...snap.docs[0].data() } as Friendship : null;
+      updateFriendshipState();
     });
+
+    const updateFriendshipState = () => {
+      setFriendship(friendship1 || friendship2);
+    };
 
     return () => {
       unsub1();
@@ -70,7 +74,7 @@ export default function UserProfileModal({ targetUid, onClose }: UserProfileModa
   }, [user, targetUid]);
 
   const sendRequest = async () => {
-    if (!user) return;
+    if (!user || !profile) return;
     try {
       await addDoc(collection(db, 'friendships'), {
         requesterId: user.uid,
@@ -78,6 +82,16 @@ export default function UserProfileModal({ targetUid, onClose }: UserProfileModa
         status: 'pending',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
+      });
+
+      // Also create a notification for the receiver
+      await createNotification({
+        recipientId: targetUid,
+        senderId: user.uid,
+        senderName: profile.displayName || 'A resident',
+        type: 'request',
+        text: `${profile.displayName || 'Someone'} sent you a friend request`,
+        link: '/campus'
       });
     } catch (error) {
       console.error("Failed to send friend request", error);
