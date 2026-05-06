@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { UserProfile, Presence } from '../types';
+import { calculateExpiry, RETENTION_CYCLES } from '../lib/retention';
 
 interface AuthContextType {
   user: User | null;
@@ -110,7 +111,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       role,
       isApproved: role === 'teacher' ? true : false, // Students need approval, teachers auto for lite
       createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      updatedAt: serverTimestamp(),
+      expiresAt: role === 'student' ? calculateExpiry(RETENTION_CYCLES.LONG) : null
     };
     await setDoc(userRef, profileData);
   };

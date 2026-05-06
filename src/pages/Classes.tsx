@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import QuizSection from '../components/QuizSection';
 import { createNotification } from '../lib/notifications';
+import { calculateExpiry, RETENTION_CYCLES } from '../lib/retention';
 
 import { PageView } from '../components/BottomNav';
 
@@ -63,7 +64,8 @@ export default function Classes({ onViewChange, onViewUser }: { onViewChange: (v
         teacherId: user.uid,
         studentIds: [],
         pendingStudentIds: [],
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        expiresAt: calculateExpiry(RETENTION_CYCLES.LONG)
       });
       setNewClassName('');
       setNewClassSubject('');

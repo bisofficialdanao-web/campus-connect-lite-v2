@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
 import { createNotification } from '../lib/notifications';
+import { calculateExpiry, RETENTION_CYCLES } from '../lib/retention';
 import { askGuide } from '../services/geminiService';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -314,6 +315,7 @@ function ChatWindow({ chat, onBack }: { chat: { id: string, name: string, type: 
           [chat.type === 'dm' ? 'chatId' : 'classId']: chatId,
           receiverId: chat.type === 'dm' ? chat.id : null,
           createdAt: serverTimestamp(),
+          expiresAt: calculateExpiry(RETENTION_CYCLES.LONG),
           reactions: {}
         });
 
@@ -348,6 +350,7 @@ function ChatWindow({ chat, onBack }: { chat: { id: string, name: string, type: 
               chatId: chatId,
               receiverId: user.uid,
               createdAt: serverTimestamp(),
+              expiresAt: calculateExpiry(RETENTION_CYCLES.LONG),
               reactions: {}
             });
           } catch (error) {
@@ -360,6 +363,7 @@ function ChatWindow({ chat, onBack }: { chat: { id: string, name: string, type: 
               chatId: chatId,
               receiverId: user.uid,
               createdAt: serverTimestamp(),
+              expiresAt: calculateExpiry(RETENTION_CYCLES.LONG),
               reactions: {}
             });
           } finally {

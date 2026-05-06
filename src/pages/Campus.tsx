@@ -52,6 +52,7 @@ import UserProfileModal from '../components/UserProfileModal';
 import AITutor from '../components/AITutor';
 import { Post, Comment as CommentType } from '../types';
 import { createNotification } from '../lib/notifications';
+import { calculateExpiry, RETENTION_CYCLES } from '../lib/retention';
 
 import { PageView } from '../components/BottomNav';
 
@@ -101,7 +102,8 @@ export default function Campus({ onViewChange, onViewUser }: { onViewChange: (vi
       reactions: {}, 
       commentCount: 0,
       authorPhoto: isAnonymous ? null : (profile?.photoURL || user.photoURL || null),
-      isAnonymous: !!isAnonymous
+      isAnonymous: !!isAnonymous,
+      expiresAt: calculateExpiry(RETENTION_CYCLES.LONG)
     };
 
     try {
@@ -347,7 +349,8 @@ function ModuleModal({ onClose }: { onClose: () => void }) {
         isModule: true,
         moduleName: title,
         authorPhoto: profile?.photoURL || user.photoURL || null,
-        isAnonymous: false
+        isAnonymous: false,
+        expiresAt: calculateExpiry(RETENTION_CYCLES.LONG)
       };
 
       console.log('Attempting to publish module post with alignment:', postData);
@@ -1100,7 +1103,8 @@ function EventModal({ onClose }: { onClose: () => void }) {
       description,
       organizerId: user.uid,
       organizerName: profile?.displayName || user.displayName || 'Teacher',
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp(),
+      expiresAt: calculateExpiry(RETENTION_CYCLES.LONG)
     };
 
     console.log('Attempting to schedule event with logging:', eventData);

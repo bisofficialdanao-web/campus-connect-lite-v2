@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { db } from './lib/firebase';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { differenceInDays } from 'date-fns';
 import Layout from './components/Layout';
 import { PageView } from './components/BottomNav';
 import Campus from './pages/Campus';
@@ -22,6 +25,46 @@ function AppContent() {
       setCurrentView('chats');
     }
   }, [activeDM]);
+
+  useEffect(() => {
+    const checkGraduation = async () => {
+      if (!user || !profile || profile.role !== 'student' || !profile.expiresAt || profile.graduationNotified) return;
+
+      const expiryDate = profile.expiresAt.toDate();
+      const daysToExpiry = differenceInDays(expiryDate, new Date());
+
+      if (daysToExpiry <= 10 && daysToExpiry > 0) {
+        try {
+          // 1. Send the Admin DM
+          const chatId = [user.uid, 'campus-admin'].sort().join('_');
+          await addDoc(collection(db, 'direct_messages'), {
+            text: `Congratulations! You have completed your academic years in Binaliw Integrated School.\n\nThis message is to inform you that your Binaliw Integrated School CampusConnect profile will be deleted from the system within 10 days.\n\nGood luck on your journey ahead. See you around!\n\n-CampusConnect Admin`,
+            senderId: 'campus-admin',
+            senderName: 'CampusConnect Admin',
+            senderPhoto: 'https://cdn-icons-png.flaticon.com/512/1022/1022378.png',
+            chatId,
+            receiverId: user.uid,
+            createdAt: serverTimestamp(),
+            reactions: {}
+          });
+
+          // 2. Mark as notified so we don't spam
+          await updateDoc(doc(db, 'users', user.uid), {
+            graduationNotified: true
+          });
+          
+          console.log("Graduation notification sent to", profile.displayName);
+        } catch (error) {
+          console.error("Failed to send graduation notification", error);
+        }
+      }
+    };
+
+    if (user && profile) {
+      checkGraduation();
+    }
+  }, [user, profile]);
+
   const [selectingRole, setSelectingRole] = useState(false);
 
   if (loading) {

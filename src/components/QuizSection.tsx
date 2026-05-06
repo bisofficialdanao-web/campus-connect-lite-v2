@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { createNotification } from '../lib/notifications';
+import { calculateExpiry, RETENTION_CYCLES } from '../lib/retention';
+import { Download } from 'lucide-react';
 
 interface QuizSectionProps {
   subject: string;
@@ -212,7 +214,8 @@ function QuizCreator({ subject, gradeLevel, onClose }: { subject: string, gradeL
         subject: subject.toLowerCase(),
         gradeLevel,
         teacherId: user.uid,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        expiresAt: calculateExpiry(RETENTION_CYCLES.SHORT)
       });
 
       // 3. Create the secret key doc
@@ -359,7 +362,8 @@ function QuizViewer({ quiz, onClose }: { quiz: Quiz, onClose: () => void }) {
           totalQuestions: quiz.questions.length,
           subject: quiz.subject,
           gradeLevel: quiz.gradeLevel,
-          timestamp: serverTimestamp()
+          timestamp: serverTimestamp(),
+          expiresAt: calculateExpiry(RETENTION_CYCLES.SHORT)
         });
 
         // 3. Score summary UI
@@ -521,6 +525,31 @@ function ResultsModal({ quizId, onClose }: { quizId: string, onClose: () => void
     return () => unsubscribe();
   }, [quizId]);
 
+  const handleExportCSV = () => {
+    if (results.length === 0) return;
+    
+    const headers = ['Student Name', 'Score', 'Total Questions', 'Submitted At'];
+    const csvContent = [
+      headers.join(','),
+      ...results.map(res => [
+        `"${res.studentName}"`,
+        res.score,
+        res.totalQuestions,
+        res.timestamp ? res.timestamp.toDate().toLocaleString() : 'Recently'
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `results_${quizId}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -539,10 +568,20 @@ function ResultsModal({ quizId, onClose }: { quizId: string, onClose: () => void
             <BarChart3 size={16} className="text-brand-primary" />
             <h3 className="text-[12px] font-bold tracking-tight uppercase">Quiz Gradebook</h3>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-brand-border/20 rounded-md transition-all text-brand-secondary"><X size={16} /></button>
+          <div className="flex items-center gap-1.5">
+            {results.length > 0 && (
+              <button 
+                onClick={handleExportCSV}
+                className="flex items-center gap-1.5 h-[28px] px-2.5 bg-brand-primary text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:brightness-110 transition-all shadow-sm"
+              >
+                <Download size={11} /> Export
+              </button>
+            )}
+            <button onClick={onClose} className="p-1 hover:bg-brand-border/20 rounded-md transition-all text-brand-secondary"><X size={16} /></button>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 no-scrollbar space-y-2">
+        <div className="flex-1 overflow-y-auto p-4 no-scrollbar space-y-[3px]">
           {loading ? (
             <div className="py-8 text-center text-[10px] font-bold text-brand-secondary/40 uppercase tracking-widest">Fetching scores...</div>
           ) : results.length === 0 ? (
