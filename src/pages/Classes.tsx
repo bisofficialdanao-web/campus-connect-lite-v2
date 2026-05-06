@@ -353,7 +353,7 @@ function ClassItem({ c, isJoined, isPending, onJoin }: { c: Class, isJoined?: bo
           for (const sid of c.studentIds) {
              const docSnap = await getDoc(doc(db, 'users', sid));
              if (docSnap.exists()) {
-               profiles.push({ id: docSnap.id, ...docSnap.data() } as UserProfile);
+               profiles.push({ uid: docSnap.id, ...docSnap.data() } as UserProfile);
              }
           }
           setJoinedStudents(profiles);

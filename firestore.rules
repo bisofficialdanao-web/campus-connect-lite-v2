@@ -133,10 +133,14 @@ service cloud.firestore {
     }
 
     function isValidMessage(data) {
-      return data.keys().hasAny(['text', 'senderId', 'senderName', 'receiverId', 'classId', 'createdAt'])
+      return data.keys().hasAll(['text', 'senderId', 'senderName', 'createdAt'])
         && data.text is string && data.text.size() <= 2000
         && data.senderId == request.auth.uid
-        && data.createdAt == request.time;
+        && data.createdAt == request.time
+        && (!data.keys().contains('senderPhoto') || data.senderPhoto is string || data.senderPhoto == null)
+        && (!data.keys().contains('isEdited') || data.isEdited is bool)
+        && (!data.keys().contains('reactions') || data.reactions is map)
+        && (!data.keys().contains('updatedAt') || data.updatedAt == request.time);
     }
 
     function isValidResource(data) {
@@ -205,15 +209,32 @@ service cloud.firestore {
       }
     }
 
-    // 4. Messages
-    match /messages/{messageId} {
+    // 4. Messages (Class Groups & DMs)
+    match /group_messages/{messageId} {
       allow read: if isSignedIn() && (
-        resource.data.senderId == request.auth.uid || 
-        resource.data.receiverId == request.auth.uid ||
-        (resource.data.classId != null && request.auth.uid in get(/databases/$(database)/documents/classes/$(resource.data.classId)).data.studentIds) ||
-        (resource.data.classId != null && request.auth.uid == get(/databases/$(database)/documents/classes/$(resource.data.classId)).data.teacherId)
+        resource.data.teacherId == request.auth.uid ||
+        request.auth.uid in get(/databases/$(database)/documents/classes/$(resource.data.classId)).data.studentIds ||
+        request.auth.uid == get(/databases/$(database)/documents/classes/$(resource.data.classId)).data.teacherId
       );
       allow create: if isSignedIn() && isValidMessage(incoming());
+      allow update: if isSignedIn() && (
+        (isOwner(existing().senderId) && incoming().diff(existing()).affectedKeys().hasOnly(['text', 'isEdited', 'updatedAt'])) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['reactions']))
+      );
+      allow delete: if isSignedIn() && isOwner(existing().senderId);
+    }
+
+    match /direct_messages/{messageId} {
+      allow read: if isSignedIn() && (
+        resource.data.senderId == request.auth.uid || 
+        resource.data.receiverId == request.auth.uid
+      );
+      allow create: if isSignedIn() && isValidMessage(incoming()) && (incoming().receiverId != null);
+      allow update: if isSignedIn() && (
+        (isOwner(existing().senderId) && incoming().diff(existing()).affectedKeys().hasOnly(['text', 'isEdited', 'updatedAt'])) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['reactions']))
+      );
+      allow delete: if isSignedIn() && isOwner(existing().senderId);
     }
 
     // 5. Presence

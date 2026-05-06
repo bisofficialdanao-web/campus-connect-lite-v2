@@ -69,9 +69,13 @@
         "text": { "type": "string" },
         "senderId": { "type": "string" },
         "senderName": { "type": "string" },
+        "senderPhoto": { "type": "string" },
         "receiverId": { "type": "string", "description": "For DMs" },
         "classId": { "type": "string", "description": "For group chats" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "reactions": { "type": "object" },
+        "isEdited": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["text", "senderId"]
     },
@@ -176,7 +180,8 @@
     "/classes/{classId}": { "schema": "Class", "description": "Classroom data." },
     "/posts/{postId}": { "schema": "Post", "description": "Public campus posts." },
     "/posts/{postId}/comments/{commentId}": { "schema": "Comment", "description": "Comments on posts." },
-    "/messages/{messageId}": { "schema": "Message", "description": "Direct and group messages." },
+    "/group_messages/{messageId}": { "schema": "Message", "description": "Messages for class groups." },
+    "/direct_messages/{messageId}": { "schema": "Message", "description": "Messages for direct user-to-user chats." },
     "/presence/{userId}": { "schema": "Presence", "description": "Online presence tracking." },
     "/quizzes/{quizId}": { "schema": "Quiz", "description": "Class and subject quizzes (no answers)." },
     "/quizKeys/{quizId}": { "schema": "QuizKey", "description": "Answer keys for quizzes (secure)." },

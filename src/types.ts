@@ -65,9 +65,13 @@ export interface Message {
   text: string;
   senderId: string;
   senderName: string;
+  senderPhoto?: string;
   receiverId?: string;
   classId?: string;
+  reactions?: Record<string, string[]>; // emoji key -> array of uids
+  isEdited?: boolean;
   createdAt: any;
+  updatedAt?: any;
 }
 
 export interface Quiz {

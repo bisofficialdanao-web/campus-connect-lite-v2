@@ -14,7 +14,7 @@ interface UserProfileModalProps {
 }
 
 export default function UserProfileModal({ targetUid, onClose }: UserProfileModalProps) {
-  const { user, navigateToChat } = useAuth();
+  const { user, profile, navigateToChat } = useAuth();
   const [targetProfile, setTargetProfile] = useState<UserProfile | null>(null);
   const [friendship, setFriendship] = useState<Friendship | null>(null);
   const [loading, setLoading] = useState(true);
