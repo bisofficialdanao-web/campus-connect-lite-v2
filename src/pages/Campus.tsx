@@ -497,6 +497,16 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
           text: `${profile?.displayName || 'Someone'} reacted to your post: "${post.content.substring(0, 30)}..."`,
           link: `/campus`
         });
+
+        // Log Activity
+        await logActivity({
+          userId: user.uid,
+          userName: profile?.displayName || 'Campus Member',
+          userPhoto: profile?.photoURL,
+          type: 'reaction',
+          content: `${REACTION_TYPES.find(r => r.key === reactionKey)?.emoji || 'Reacted'} on a post`,
+          targetId: post.id
+        });
       }
       setShowReactionPicker(false);
     } catch (error) {
@@ -780,6 +790,7 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
         {showComments && (
           <CommentsList 
             postId={post.id} 
+            postContent={post.content}
             currentCommentCount={post.commentCount} 
             onUserClick={onUserClick}
           />
@@ -789,7 +800,7 @@ function PostCard({ post, onUserClick }: { post: Post, onUserClick: (uid: string
   );
 }
 
-function CommentsList({ postId, currentCommentCount, onUserClick }: { postId: string, currentCommentCount: number, onUserClick: (uid: string) => void }) {
+function CommentsList({ postId, postContent, currentCommentCount, onUserClick }: { postId: string, postContent: string, currentCommentCount: number, onUserClick: (uid: string) => void }) {
   const { user, profile, auth } = useAuth();
   const [comments, setComments] = useState<CommentType[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -838,7 +849,8 @@ function CommentsList({ postId, currentCommentCount, onUserClick }: { postId: st
         userPhoto: profile?.photoURL,
         type: 'comment',
         content: newComment.substring(0, 50),
-        targetId: postId
+        targetId: postId,
+        targetContent: postContent.substring(0, 100) // Keep the original post context
       });
 
       setNewComment('');

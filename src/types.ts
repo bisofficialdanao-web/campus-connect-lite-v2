@@ -41,6 +41,7 @@ export interface Activity {
   content: string;
   targetId?: string; // id of the post/quiz/class
   targetName?: string; // title of post/quiz
+  targetContent?: string; // preview of original post for comments
   timestamp: any;
 }
 

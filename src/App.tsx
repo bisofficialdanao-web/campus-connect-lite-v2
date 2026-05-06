@@ -91,11 +91,18 @@ function AppContent() {
     );
   }
 
+  const handleViewChange = (view: PageView) => {
+    if (view === 'profile') {
+      setTargetProfileUid(null);
+    }
+    setCurrentView(view);
+  };
+
   const renderView = () => {
     switch (currentView) {
       case 'campus': return (
         <Campus 
-          onViewChange={setCurrentView} 
+          onViewChange={handleViewChange} 
           onViewUser={(uid) => {
             setTargetProfileUid(uid);
             setCurrentView('profile');
@@ -105,7 +112,7 @@ function AppContent() {
       case 'library': return <Library />;
       case 'classes': return (
         <Classes 
-          onViewChange={setCurrentView} 
+          onViewChange={handleViewChange} 
           onViewUser={(uid) => {
             setTargetProfileUid(uid);
             setCurrentView('profile');
@@ -121,11 +128,12 @@ function AppContent() {
             setCurrentView('profile');
           }}
           onBackToMe={() => setTargetProfileUid(null)}
+          onViewChange={handleViewChange}
         />
       );
       default: return (
         <Campus 
-          onViewChange={setCurrentView} 
+          onViewChange={handleViewChange} 
           onViewUser={(uid) => {
             setTargetProfileUid(uid);
             setCurrentView('profile');
@@ -136,7 +144,7 @@ function AppContent() {
   };
 
   return (
-    <Layout currentView={currentView} onViewChange={setCurrentView}>
+    <Layout currentView={currentView} onViewChange={handleViewChange}>
       <AnimatePresence mode="wait">
         <motion.div
           key={currentView}

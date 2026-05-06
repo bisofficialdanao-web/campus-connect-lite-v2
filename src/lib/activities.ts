@@ -9,6 +9,7 @@ export interface ActivityPayload {
   content: string;
   targetId?: string;
   targetName?: string;
+  targetContent?: string;
 }
 
 export async function logActivity(payload: ActivityPayload) {
