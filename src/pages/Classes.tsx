@@ -26,7 +26,7 @@ const SUBJECTS = [
 
 const GRADES = [7, 8, 9, 10];
 
-export default function Classes({ onViewChange }: { onViewChange: (view: PageView) => void }) {
+export default function Classes({ onViewChange, onViewUser }: { onViewChange: (view: PageView) => void, onViewUser: (uid: string) => void }) {
   const { user, profile } = useAuth();
   const [classes, setClasses] = useState<Class[]>([]);
   const [showCreate, setShowCreate] = useState(false);
@@ -205,7 +205,7 @@ export default function Classes({ onViewChange }: { onViewChange: (view: PageVie
               {myClasses.length > 0 ? (
                 <div className="grid grid-cols-1 gap-2">
                   {myClasses.map(c => (
-                    <ClassItem key={c.id} c={c} isJoined={true} />
+                    <ClassItem key={c.id} c={c} isJoined={true} onViewUser={onViewUser} />
                   ))}
                 </div>
               ) : (
@@ -223,7 +223,7 @@ export default function Classes({ onViewChange }: { onViewChange: (view: PageVie
                     </div>
                     <div className="grid grid-cols-1 gap-2 opacity-75">
                       {pendingClasses.map(c => (
-                        <ClassItem key={c.id} c={c} isPending={true} />
+                        <ClassItem key={c.id} c={c} isPending={true} onViewUser={onViewUser} />
                       ))}
                     </div>
                   </section>
@@ -237,7 +237,7 @@ export default function Classes({ onViewChange }: { onViewChange: (view: PageVie
                     </div>
                     <div className="grid grid-cols-1 gap-2">
                       {availableClasses.map(c => (
-                        <ClassItem key={c.id} c={c} onJoin={() => handleJoin(c.id)} />
+                        <ClassItem key={c.id} c={c} onJoin={() => handleJoin(c.id)} onViewUser={onViewUser} />
                       ))}
                     </div>
                   </section>
@@ -334,7 +334,7 @@ export default function Classes({ onViewChange }: { onViewChange: (view: PageVie
   );
 }
 
-function ClassItem({ c, isJoined, isPending, onJoin }: { c: Class, isJoined?: boolean, isPending?: boolean, onJoin?: () => void }) {
+function ClassItem({ c, isJoined, isPending, onJoin, onViewUser }: { c: Class, isJoined?: boolean, isPending?: boolean, onJoin?: () => void, onViewUser: (uid: string) => void }) {
   const { user, profile } = useAuth();
   const [showStudents, setShowStudents] = useState(false);
   const [showMasterList, setShowMasterList] = useState(false);
@@ -479,7 +479,10 @@ function ClassItem({ c, isJoined, isPending, onJoin }: { c: Class, isJoined?: bo
                     ) : joinedStudents.length > 0 ? (
                       joinedStudents.map(student => (
                         <div key={student.uid} className="flex items-center justify-between p-2 bg-brand-bg/50 border border-brand-border/10 rounded-lg">
-                          <div className="flex items-center gap-2">
+                          <div 
+                            className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => onViewUser(student.uid)}
+                          >
                             <div className="w-6 h-6 rounded-md bg-white border border-brand-border/20 flex items-center justify-center overflow-hidden">
                               {student.photoURL ? (
                                 <img src={student.photoURL} alt="" className="w-full h-full object-cover" />

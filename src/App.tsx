@@ -15,6 +15,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 function AppContent() {
   const { user, profile, loading, signIn, updateRole, activeDM } = useAuth();
   const [currentView, setCurrentView] = useState<PageView>('campus');
+  const [targetProfileUid, setTargetProfileUid] = useState<string | null>(null);
 
   useEffect(() => {
     if (activeDM) {
@@ -92,12 +93,45 @@ function AppContent() {
 
   const renderView = () => {
     switch (currentView) {
-      case 'campus': return <Campus onViewChange={setCurrentView} />;
+      case 'campus': return (
+        <Campus 
+          onViewChange={setCurrentView} 
+          onViewUser={(uid) => {
+            setTargetProfileUid(uid);
+            setCurrentView('profile');
+          }}
+        />
+      );
       case 'library': return <Library />;
-      case 'classes': return <Classes onViewChange={setCurrentView} />;
+      case 'classes': return (
+        <Classes 
+          onViewChange={setCurrentView} 
+          onViewUser={(uid) => {
+            setTargetProfileUid(uid);
+            setCurrentView('profile');
+          }}
+        />
+      );
       case 'chats': return <Chats />;
-      case 'profile': return <Profile />;
-      default: return <Campus onViewChange={setCurrentView} />;
+      case 'profile': return (
+        <Profile 
+          targetUid={targetProfileUid} 
+          onViewUser={(uid) => {
+            setTargetProfileUid(uid);
+            setCurrentView('profile');
+          }}
+          onBackToMe={() => setTargetProfileUid(null)}
+        />
+      );
+      default: return (
+        <Campus 
+          onViewChange={setCurrentView} 
+          onViewUser={(uid) => {
+            setTargetProfileUid(uid);
+            setCurrentView('profile');
+          }}
+        />
+      );
     }
   };
 

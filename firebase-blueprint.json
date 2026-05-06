@@ -11,11 +11,33 @@
         "photoURL": { "type": "string" },
         "role": { "type": "string", "enum": ["teacher", "student"] },
         "isApproved": { "type": "boolean" },
+        "bio": { "type": "string" },
+        "lrn": { "type": "string" },
+        "section": { "type": "string" },
+        "degree": { "type": "string" },
+        "major": { "type": "string" },
+        "subjects": { "type": "array", "items": { "type": "string" } },
+        "yearsInService": { "type": "integer" },
+        "gradeLevel": { "type": "integer" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "role", "isApproved"]
     },
+    "Activity": {
+      "title": "Activity",
+      "description": "Log of user actions.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "type": { "type": "string" },
+        "content": { "type": "string" },
+        "targetId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "content", "timestamp"]
+    }
     "Class": {
       "title": "Class",
       "description": "A subject-based classroom created by a teacher.",
@@ -182,6 +204,7 @@
     "/posts/{postId}/comments/{commentId}": { "schema": "Comment", "description": "Comments on posts." },
     "/group_messages/{messageId}": { "schema": "Message", "description": "Messages for class groups." },
     "/direct_messages/{messageId}": { "schema": "Message", "description": "Messages for direct user-to-user chats." },
+    "/activities/{activityId}": { "schema": "Activity", "description": "User activity logs." },
     "/presence/{userId}": { "schema": "Presence", "description": "Online presence tracking." },
     "/quizzes/{quizId}": { "schema": "Quiz", "description": "Class and subject quizzes (no answers)." },
     "/quizKeys/{quizId}": { "schema": "QuizKey", "description": "Answer keys for quizzes (secure)." },

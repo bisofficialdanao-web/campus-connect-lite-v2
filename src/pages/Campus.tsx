@@ -56,15 +56,15 @@ import { createNotification } from '../lib/notifications';
 import { PageView } from '../components/BottomNav';
 
 import { handleFirestoreError, OperationType } from '../lib/errorHandlers';
+import { logActivity } from '../lib/activities';
 
-export default function Campus({ onViewChange }: { onViewChange: (view: PageView) => void }) {
+export default function Campus({ onViewChange, onViewUser }: { onViewChange: (view: PageView) => void, onViewUser: (uid: string) => void }) {
   const { user, profile, auth } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [newPost, setNewPost] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isPosting, setIsPosting] = useState(false);
-  const [selectedUserUid, setSelectedUserUid] = useState<string | null>(null);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [isModuleModalOpen, setIsModuleModalOpen] = useState(false);
   const [isAITutorOpen, setIsAITutorOpen] = useState(false);
@@ -106,6 +106,16 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
 
     try {
       await addDoc(collection(db, path), postData);
+      
+      await logActivity({
+        userId: user.uid,
+        userName: profile?.displayName || 'Campus Member',
+        userPhoto: profile?.photoURL,
+        type: 'post',
+        content: newPost.substring(0, 100),
+        targetId: '', // Will be updated if I had the ID but empty is fine for feed query
+      });
+
       setNewPost('');
       setIsAnonymous(false);
     } catch (error: any) {
@@ -231,7 +241,7 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
                 <PostCard 
                   key={post.id} 
                   post={post} 
-                  onUserClick={(uid) => setSelectedUserUid(uid)}
+                  onUserClick={(uid) => onViewUser(uid)}
                 />
               ))}
             </AnimatePresence>
@@ -270,9 +280,6 @@ export default function Campus({ onViewChange }: { onViewChange: (view: PageView
       </div>
 
       <AnimatePresence>
-        {selectedUserUid && (
-          <UserProfileModal targetUid={selectedUserUid} onClose={() => setSelectedUserUid(null)} />
-        )}
         {isEventModalOpen && (
           <EventModal onClose={() => setIsEventModalOpen(false)} />
         )}
@@ -823,6 +830,15 @@ function CommentsList({ postId, currentCommentCount, onUserClick }: { postId: st
       const postRef = doc(db, 'posts', postId);
       await updateDoc(postRef, {
         commentCount: (currentCommentCount + 1)
+      });
+
+      await logActivity({
+        userId: user.uid,
+        userName: profile?.displayName || 'Anonymous',
+        userPhoto: profile?.photoURL,
+        type: 'comment',
+        content: newComment.substring(0, 50),
+        targetId: postId
       });
 
       setNewComment('');

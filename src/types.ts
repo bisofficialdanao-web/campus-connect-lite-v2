@@ -19,8 +19,29 @@ export interface UserProfile {
   photoURL: string;
   role: UserRole;
   isApproved: boolean;
+  bio?: string;
+  // School ID fields
+  lrn?: string;
+  section?: string;
+  degree?: string;
+  major?: string;
+  subjects?: string[];
+  yearsInService?: number;
+  gradeLevel?: number;
   createdAt: any;
   updatedAt: any;
+}
+
+export interface Activity {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhoto?: string;
+  type: 'post' | 'comment' | 'reaction' | 'quiz_complete' | 'class_create';
+  content: string;
+  targetId?: string; // id of the post/quiz/class
+  targetName?: string; // title of post/quiz
+  timestamp: any;
 }
 
 export interface Class {

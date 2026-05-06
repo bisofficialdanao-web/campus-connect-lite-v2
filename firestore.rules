@@ -39,12 +39,17 @@ service cloud.firestore {
     // --- Validation Blueprints ---
 
     function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'email', 'role', 'isApproved', 'createdAt', 'updatedAt', 'displayName', 'photoURL'])
-        && data.uid == request.auth.uid
+      return data.uid == request.auth.uid
         && data.role in ['teacher', 'student']
         && data.isApproved is bool
         && data.createdAt == request.time
         && data.updatedAt == request.time;
+    }
+
+    function isValidActivity(data) {
+      return data.userId == request.auth.uid
+        && data.timestamp == request.time
+        && data.content is string;
     }
 
     function isValidQuiz(data) {
@@ -162,11 +167,18 @@ service cloud.firestore {
       allow list: if isSignedIn();
       allow create: if isOwner(userId) && isValidUser(incoming());
       allow update: if isOwner(userId) 
-        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'updatedAt'])
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayName', 'photoURL', 'updatedAt', 'bio', 
+          'lrn', 'section', 'degree', 'major', 
+          'subjects', 'yearsInService', 'gradeLevel'
+        ])
         && incoming().updatedAt == request.time;
-      // Note: Approval and Role change should ideally be handled by a secure backend or an admin, 
-      // but for this lite app version we assume self-registration is the starting point.
-      // We protect the role from being updated by the user themselves in the update block.
+    }
+
+    // --- Activities ---
+    match /activities/{activityId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidActivity(incoming());
     }
 
     // 2. Classes
