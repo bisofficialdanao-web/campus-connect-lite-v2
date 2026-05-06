@@ -8,6 +8,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
 import { createNotification } from '../lib/notifications';
+import { askGuide } from '../services/geminiService';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 const REACTION_SET = [
   { emoji: '👍', name: 'like' },
@@ -195,7 +200,11 @@ export default function Chats() {
                   className="w-full flex items-center gap-3 p-3 bg-brand-surface border border-brand-border/30 rounded-2xl hover:border-brand-primary/20 transition-all text-left group shadow-sm"
                 >
                   <div className="w-12 h-12 bg-brand-bg rounded-xl flex items-center justify-center overflow-hidden border border-brand-border/20">
-                    {dm.photoURL ? (
+                    {dm.uid === 'guide-ai' ? (
+                      <div className="w-full h-full bg-brand-ink flex items-center justify-center text-[#ff00ff]">
+                        <Sparkles size={24} />
+                      </div>
+                    ) : dm.photoURL ? (
                       <img src={dm.photoURL} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-brand-secondary/60 font-bold text-lg">{dm.displayName[0]}</span>
@@ -227,6 +236,7 @@ function ChatWindow({ chat, onBack }: { chat: { id: string, name: string, type: 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [isAiTyping, setIsAiTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showQuickMenu, setShowQuickMenu] = useState<{ id: string, name: string, x: number, y: number } | null>(null);
   const [longPressedMessage, setLongPressedMessage] = useState<string | null>(null);
@@ -318,6 +328,44 @@ function ChatWindow({ chat, onBack }: { chat: { id: string, name: string, type: 
             link: '/chats'
           });
         }
+
+        // AI Logic
+        if (chat.type === 'dm' && chat.id === 'guide-ai') {
+          setIsAiTyping(true);
+          try {
+            const history = messages.slice(-10).map(m => ({
+              role: m.senderId === user.uid ? 'user' as const : 'model' as const,
+              parts: [{ text: m.text }]
+            }));
+            
+            const aiResponse = await askGuide(input, history);
+            
+            await addDoc(collection(db, collectionName), {
+              text: aiResponse,
+              senderId: 'guide-ai',
+              senderName: 'The Guide (AI)',
+              senderPhoto: '',
+              chatId: chatId,
+              receiverId: user.uid,
+              createdAt: serverTimestamp(),
+              reactions: {}
+            });
+          } catch (error) {
+            console.error("AI Response failed", error);
+            await addDoc(collection(db, collectionName), {
+              text: "I'm sorry, I'm having trouble connecting to my neural network. Please try again.",
+              senderId: 'guide-ai',
+              senderName: 'The Guide (AI)',
+              senderPhoto: '',
+              chatId: chatId,
+              receiverId: user.uid,
+              createdAt: serverTimestamp(),
+              reactions: {}
+            });
+          } finally {
+            setIsAiTyping(false);
+          }
+        }
       }
     } catch (error) {
       console.error("Message send failed", error);
@@ -372,7 +420,7 @@ function ChatWindow({ chat, onBack }: { chat: { id: string, name: string, type: 
 
   const handleAvatarClick = (e: React.MouseEvent, m: Message) => {
     e.stopPropagation();
-    if (m.senderId === user?.uid) return;
+    if (m.senderId === user?.uid || m.senderId === 'guide-ai') return;
     setShowQuickMenu({
       id: m.senderId,
       name: m.senderName,
@@ -387,7 +435,11 @@ function ChatWindow({ chat, onBack }: { chat: { id: string, name: string, type: 
       <div className="h-14 bg-brand-surface border-b border-brand-border/40 flex items-center px-4 gap-3">
         <button onClick={onBack} className="p-1.5 text-brand-secondary hover:text-brand-ink transition-colors"><ChevronLeft size={22} /></button>
         <div className="w-10 h-10 rounded-xl bg-brand-bg flex items-center justify-center overflow-hidden border border-brand-border/20 shadow-sm">
-          {chat.photo ? (
+          {chat.id === 'guide-ai' ? (
+            <div className="w-full h-full bg-brand-ink flex items-center justify-center text-[#ff00ff]">
+               <Sparkles size={18} />
+            </div>
+          ) : chat.photo ? (
             <img src={chat.photo} alt="" className="w-full h-full object-cover" />
           ) : (
             <span className="text-brand-primary font-bold text-sm tracking-tight">{chat.name[0]}</span>
@@ -446,7 +498,20 @@ function ChatWindow({ chat, onBack }: { chat: { id: string, name: string, type: 
                       : "bg-white border border-brand-border/40 text-brand-ink rounded-bl-none"
                   )}
                 >
-                  {m.text}
+                  <div className={cn(
+                    "prose prose-sm max-w-none break-words",
+                    "prose-p:text-[12px] prose-p:font-medium prose-p:leading-relaxed prose-p:mb-2 last:prose-p:mb-0",
+                    "prose-headings:text-brand-ink prose-headings:font-bold prose-headings:mb-1 prose-headings:mt-2 first:prose-headings:mt-0",
+                    "prose-strong:font-bold prose-strong:text-brand-primary",
+                    "prose-ul:list-disc prose-ul:pl-4 prose-ul:mb-2",
+                    "prose-ol:list-decimal prose-ol:pl-4 prose-ol:mb-2",
+                    "prose-li:text-[12px] prose-li:font-medium",
+                    isMine ? "prose-invert" : ""
+                  )}>
+                    <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                      {m.text}
+                    </ReactMarkdown>
+                  </div>
                   {m.isEdited && <span className="ml-1 text-[8px] opacity-60">(edited)</span>}
 
                   {/* Long Press Menu Trigger (Desktop fallback) */}
@@ -491,6 +556,22 @@ function ChatWindow({ chat, onBack }: { chat: { id: string, name: string, type: 
             </div>
           );
         })}
+
+        {isAiTyping && (
+          <div className="flex items-end gap-2">
+            <div className="w-7 h-7 rounded-lg bg-brand-ink flex items-center justify-center overflow-hidden border border-brand-border/20 shadow-sm shrink-0">
+               <Sparkles size={14} className="text-[#ff00ff] animate-pulse" />
+            </div>
+            <div className="flex flex-col items-start max-w-[70%]">
+              <div className="bg-white border border-brand-border/40 p-3 px-4 rounded-xl rounded-bl-none flex gap-1.5 shadow-sm">
+                <motion.div animate={{ opacity: [1, 0.4, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 bg-[#ff00ff] rounded-full" />
+                <motion.div animate={{ opacity: [1, 0.4, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-[#ff00ff] rounded-full" />
+                <motion.div animate={{ opacity: [1, 0.4, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-[#ff00ff] rounded-full" />
+              </div>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-[#ff00ff] mt-1 ml-1">Guide is thinking...</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Input Area */}
