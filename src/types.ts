@@ -5,7 +5,7 @@ export interface AppNotification {
   recipientId: string;
   senderId?: string;
   senderName?: string;
-  type: 'message' | 'announcement' | 'request' | 'quiz' | 'reaction' | 'comment';
+  type: 'message' | 'announcement' | 'request' | 'quiz' | 'reaction' | 'comment' | 'class_request' | 'system';
   text: string;
   link?: string;
   isRead: boolean;

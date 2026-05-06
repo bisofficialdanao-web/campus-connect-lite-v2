@@ -144,7 +144,14 @@ function AppContent() {
   };
 
   return (
-    <Layout currentView={currentView} onViewChange={handleViewChange}>
+    <Layout 
+      currentView={currentView} 
+      onViewChange={handleViewChange}
+      onViewUser={(uid) => {
+        setTargetProfileUid(uid);
+        setCurrentView('profile');
+      }}
+    >
       <AnimatePresence mode="wait">
         <motion.div
           key={currentView}

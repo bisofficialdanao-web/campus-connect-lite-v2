@@ -3,7 +3,7 @@ import { collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, delet
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Message, Class, UserProfile } from '../types';
-import { Send, User, MessageSquare, Users, ChevronLeft, Search, MoreVertical, Edit2, Trash2, Heart, ThumbsUp, Zap, Frown, Angry, Smile, MoreHorizontal } from 'lucide-react';
+import { Send, User, MessageSquare, Users, ChevronLeft, Search, MoreVertical, Edit2, Trash2, Heart, ThumbsUp, Zap, Frown, Angry, Smile, MoreHorizontal, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
